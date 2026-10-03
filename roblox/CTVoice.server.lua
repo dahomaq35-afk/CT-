@@ -7,7 +7,7 @@ local HttpService = game:GetService("HttpService")
 -- SETTINGS
 --=========================================================
 local API_URL = "https://YOUR-CT-VOICE-DOMAIN.com"
-local POSITION_UPDATE_SECONDS = 30
+local POSITION_UPDATE_SECONDS = 1
 local STATUS_CHECK_SECONDS = 5
 --=========================================================
 -- STATE
