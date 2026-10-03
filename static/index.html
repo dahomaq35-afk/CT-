@@ -1,1 +1,201 @@
-
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CT Voice</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="background-glow glow-one"></div>
+    <div class="background-glow glow-two"></div>
+    <main class="app">
+        <!-- LOGO -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-c">C</span><span class="logo-t">T</span>
+            </div>
+            <div class="brand">
+                <h1>CT VOICE</h1>
+                <p>نظام الاتصال الصوتي</p>
+            </div>
+        </header>
+        <!-- VERIFICATION -->
+        <section id="verificationCard" class="card">
+            <div class="card-icon">🎙️</div>
+            <h2>التحقق من حسابك</h2>
+            <p class="description">
+                أدخل اسم حسابك في Roblox للبدء باستخدام CT Voice.
+            </p>
+            <div class="input-group">
+                <label for="username">
+                    اسم حساب Roblox
+                </label>
+                <input
+                    id="username"
+                    type="text"
+                    maxlength="20"
+                    autocomplete="off"
+                    placeholder="مثال: Player123"
+                >
+            </div>
+            <button
+                id="checkButton"
+                class="primary-button"
+                onclick="requestVerification()"
+            >
+                التحقق من الحساب
+            </button>
+            <div id="message" class="message hidden"></div>
+        </section>
+        <!-- MICROPHONE QUESTION -->
+        <section
+            id="microphoneCard"
+            class="card hidden"
+        >
+            <div class="card-icon success-icon">✓</div>
+            <h2>تم العثور عليك</h2>
+            <p class="description">
+                حسابك موجود وأنت داخل سيرفر CT.
+            </p>
+            <div class="question-box">
+                <strong>هل تريد تفعيل المايك؟</strong>
+                <span>
+                    سيتم إرسال رمز تحقق إلى داخل اللعبة.
+                </span>
+            </div>
+            <div class="button-row">
+                <button
+                    class="primary-button"
+                    onclick="acceptMicrophone()"
+                >
+                    نعم، تفعيل المايك
+                </button>
+                <button
+                    class="secondary-button"
+                    onclick="declineMicrophone()"
+                >
+                    لا
+                </button>
+            </div>
+            <div id="declineMessage" class="message hidden"></div>
+        </section>
+        <!-- VERIFICATION CODE -->
+        <section
+            id="codeCard"
+            class="card hidden"
+        >
+            <div class="card-icon">🔐</div>
+            <h2>رمز التحقق</h2>
+            <p class="description">
+                تم إرسال رمز إلى حسابك داخل لعبة Roblox.
+            </p>
+            <div class="code-input-wrapper">
+                <input
+                    id="verificationCode"
+                    type="text"
+                    maxlength="8"
+                    autocomplete="one-time-code"
+                    placeholder="XXXXXXXX"
+                >
+            </div>
+            <button
+                class="primary-button"
+                onclick="verifyCode()"
+            >
+                تأكيد الرمز
+            </button>
+            <div id="codeMessage" class="message hidden"></div>
+        </section>
+        <!-- VOICE -->
+        <section
+            id="voiceCard"
+            class="card voice-card hidden"
+        >
+            <div class="voice-status">
+                <span
+                    id="statusDot"
+                    class="status-dot"
+                ></span>
+                <span id="voiceStatus">
+                    متصل بالصوت
+                </span>
+            </div>
+            <div class="voice-user">
+                <div class="avatar">
+                    C
+                </div>
+                <div>
+                    <strong id="voiceUsername">
+                        CT User
+                    </strong>
+                    <span>
+                        CT Voice
+                    </span>
+                </div>
+            </div>
+            <div class="voice-controls">
+                <!-- MIC -->
+                <button
+                    id="micButton"
+                    class="voice-button"
+                    onclick="toggleMicrophone()"
+                >
+                    <span id="micIcon">🎙️</span>
+                    <span id="micText">كتم المايك</span>
+                </button>
+                <!-- LEAVE -->
+                <button
+                    class="voice-button leave-button"
+                    onclick="showLeaveConfirmation()"
+                >
+                    🚪
+                    <span>مغادرة الصوت</span>
+                </button>
+            </div>
+            <div
+                id="voiceMessage"
+                class="message hidden"
+            ></div>
+        </section>
+        <!-- LEAVE CONFIRMATION MODAL -->
+        <div
+            id="leaveModal"
+            class="modal-overlay hidden"
+        >
+            <div class="confirm-modal">
+                <div class="confirm-icon">
+                    🚪
+                </div>
+                <h3>
+                    مغادرة CT Voice؟
+                </h3>
+                <p>
+                    هل أنت متأكد أنك تريد مغادرة الصوت؟
+                </p>
+                <div class="confirm-buttons">
+                    <button
+                        class="confirm-leave"
+                        onclick="confirmLeaveVoice()"
+                    >
+                        مغادرة
+                    </button>
+                    <button
+                        class="confirm-cancel"
+                        onclick="hideLeaveConfirmation()"
+                    >
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- FOOTER -->
+        <footer>
+            <span>CT</span>
+            <span>•</span>
+            <span>CT Voice</span>
+        </footer>
+    </main>
+    <script src="/static/voice.js"></script>
+</body>
+</html>
