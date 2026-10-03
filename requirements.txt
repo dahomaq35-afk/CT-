@@ -1,1 +1,6 @@
-
+fastapi
+uvicorn
+gunicorn
+requests
+pydantic
+livekit-api
