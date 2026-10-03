@@ -9,30 +9,23 @@
         content="width=device-width, initial-scale=1.0"
     >
 
-    <meta
-        name="theme-color"
-        content="#080808"
-    >
-
     <title>CT Voice</title>
+
+    <meta
+        name="description"
+        content="CT Voice - نظام الصوت القريب المدى الخاص بسيرفر CT"
+    >
 
     <link
         rel="stylesheet"
         href="/static/style.css"
     >
 
-    <!-- LiveKit Browser SDK -->
+    <!-- LiveKit Client -->
     <script
         src="https://cdn.jsdelivr.net/npm/livekit-client/dist/livekit-client.umd.min.js"
-        defer
-    ></script>
-
-    <script
-        src="/static/voice.js"
-        defer
     ></script>
 </head>
-
 
 <body>
 
@@ -40,77 +33,99 @@
          BACKGROUND
     ====================================================== -->
 
-    <div class="background">
-        <div class="background-glow glow-one"></div>
-        <div class="background-glow glow-two"></div>
-    </div>
+    <div class="background-glow glow-one"></div>
+    <div class="background-glow glow-two"></div>
+
+
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
+    <header class="topbar">
+
+        <div class="brand">
+
+            <div class="brand-logo">
+                <span class="logo-c">C</span>
+                <span class="logo-t">T</span>
+            </div>
+
+            <div class="brand-text">
+                <strong>CT Voice</strong>
+                <span>نظام الصوت الخاص بـ CT</span>
+            </div>
+
+        </div>
+
+        <div class="status-badge">
+            <span class="status-dot"></span>
+            <span>النظام يعمل</span>
+        </div>
+
+    </header>
 
 
     <!-- =====================================================
          MAIN
     ====================================================== -->
 
-    <main class="page">
+    <main class="container">
+
 
         <!-- =================================================
-             HEADER
+             HERO
         ================================================== -->
 
-        <header class="hero">
+        <section class="hero">
 
-            <div class="brand">
-
-                <div class="brand-logo">
-                    <span class="logo-c">C</span><span class="logo-t">T</span>
-                </div>
-
-                <div class="brand-text">
-
-                    <h1>CT Voice</h1>
-
-                    <p>
-                        نظام الصوت الخاص بسيرفر CT
-                    </p>
-
-                </div>
-
+            <div class="hero-badge">
+                🎙️ CT VOICE
             </div>
 
-            <div class="online-badge">
-                <span class="online-dot"></span>
-                <span>النظام يعمل</span>
-            </div>
+            <h1>
+                صوتك داخل
+                <span>CT</span>
+            </h1>
 
-        </header>
+            <p>
+                نظام صوت قريب المدى مصمم لتجربة RP أفضل.
+                تحقق من حسابك وابدأ استخدام الصوت داخل السيرفر.
+            </p>
+
+        </section>
 
 
         <!-- =================================================
-             AUTH SECTION
+             AUTH CARD
         ================================================== -->
 
         <section
-            id="verificationCard"
             class="card auth-card"
+            id="authCard"
         >
 
             <div class="card-icon">
                 🔐
             </div>
 
-            <div class="card-heading">
+            <div class="card-header">
 
                 <h2>
-                    التحقق من حسابك
+                    تسجيل الدخول
                 </h2>
 
                 <p>
-                    أدخل اسم حساب Roblox للبدء
+                    اكتب اسم حسابك في Roblox للتحقق من وجودك داخل سيرفر CT.
                 </p>
 
             </div>
 
 
-            <div class="form-group">
+            <!-- =================================================
+                 STEP 1 - USERNAME
+            ================================================== -->
+
+            <div id="usernameStep">
 
                 <label for="username">
                     اسم Roblox
@@ -123,9 +138,9 @@
                     </span>
 
                     <input
-                        id="username"
                         type="text"
-                        placeholder="اكتب اسم حسابك"
+                        id="username"
+                        placeholder="اكتب اسم Roblox"
                         autocomplete="off"
                         maxlength="32"
                         spellcheck="false"
@@ -133,256 +148,251 @@
 
                 </div>
 
-            </div>
-
-
-            <button
-                id="checkButton"
-                class="primary-button"
-                type="button"
-                onclick="requestVerification()"
-            >
-
-                <span>
-                    التحقق من الحساب
-                </span>
-
-                <span class="button-arrow">
-                    ←
-                </span>
-
-            </button>
-
-
-            <div
-                id="message"
-                class="message hidden"
-            ></div>
-
-
-            <div class="security-note">
-
-                <span>🛡️</span>
-
-                <span>
-                    يتم استخدام اسم Roblox للتحقق فقط.
-                </span>
-
-            </div>
-
-        </section>
-
-
-        <!-- =================================================
-             MICROPHONE QUESTION
-        ================================================== -->
-
-        <section
-            id="microphoneCard"
-            class="card microphone-card hidden"
-        >
-
-            <div class="question-icon">
-                🎙️
-            </div>
-
-            <div class="card-heading">
-
-                <h2>
-                    هل تريد تفعيل المايك؟
-                </h2>
-
-                <p>
-                    يمكنك استخدام الصوت داخل CT Voice.
-                </p>
-
-            </div>
-
-
-            <div class="question-actions">
-
                 <button
                     class="primary-button"
+                    id="verifyAccountBtn"
                     type="button"
-                    onclick="acceptMicrophone()"
                 >
-
                     <span>
-                        نعم، تفعيل المايك
+                        تحقق من الحساب
                     </span>
 
                     <span>
-                        🎙️
-                    </span>
-
-                </button>
-
-
-                <button
-                    class="secondary-button"
-                    type="button"
-                    onclick="declineMicrophone()"
-                >
-
-                    <span>
-                        لا، ليس الآن
+                        ←
                     </span>
 
                 </button>
 
             </div>
 
+
+            <!-- =================================================
+                 STEP 2 - MICROPHONE
+            ================================================== -->
 
             <div
-                id="declineMessage"
-                class="message hidden"
-            ></div>
+                class="hidden"
+                id="microphoneStep"
+            >
 
-        </section>
+                <div class="success-box">
+
+                    <div class="success-icon">
+                        ✓
+                    </div>
+
+                    <div>
+
+                        <strong id="foundUsername">
+                            تم العثور على حسابك
+                        </strong>
+
+                        <span>
+                            حسابك متصل حاليًا بسيرفر CT
+                        </span>
+
+                    </div>
+
+                </div>
 
 
-        <!-- =================================================
-             VERIFICATION CODE
-        ================================================== -->
+                <div class="question-box">
 
-        <section
-            id="codeCard"
-            class="card code-card hidden"
-        >
+                    <div class="question-icon">
+                        🎙️
+                    </div>
 
-            <div class="card-icon">
-                🔑
+                    <div class="question-content">
+
+                        <h3>
+                            هل تريد تفعيل المايك؟
+                        </h3>
+
+                        <p>
+                            سيتم إنشاء رمز تحقق خاص بك وإرساله داخل Roblox.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="question-buttons">
+
+                    <button
+                        class="primary-button"
+                        id="microphoneYesBtn"
+                        type="button"
+                    >
+                        🎙️ نعم، تفعيل المايك
+                    </button>
+
+                    <button
+                        class="secondary-button"
+                        id="microphoneNoBtn"
+                        type="button"
+                    >
+                        لا، ليس الآن
+                    </button>
+
+                </div>
+
             </div>
 
-            <div class="card-heading">
 
-                <h2>
+            <!-- =================================================
+                 STEP 3 - CODE
+            ================================================== -->
+
+            <div
+                class="hidden"
+                id="codeStep"
+            >
+
+                <div class="code-header">
+
+                    <div class="code-icon">
+                        🔑
+                    </div>
+
+                    <div>
+
+                        <h3>
+                            رمز التحقق
+                        </h3>
+
+                        <p>
+                            أدخل الرمز الظاهر لك داخل Roblox.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <div class="code-info">
+
+                    <span>
+                        الحساب
+                    </span>
+
+                    <strong id="codeUsername">
+                        -
+                    </strong>
+
+                </div>
+
+
+                <label for="verificationCode">
                     رمز التحقق
-                </h2>
-
-                <p>
-                    أدخل الرمز الظاهر لك داخل لعبة Roblox.
-                </p>
-
-            </div>
-
-
-            <div class="verification-code-wrapper">
+                </label>
 
                 <input
-                    id="verificationCode"
                     type="text"
-                    inputmode="text"
-                    autocomplete="one-time-code"
-                    maxlength="8"
+                    id="verificationCode"
+                    class="code-input"
                     placeholder="XXXXXXXX"
+                    maxlength="8"
+                    autocomplete="one-time-code"
                     spellcheck="false"
                 >
 
-            </div>
 
-
-            <div class="code-info">
-
-                <div class="info-item">
+                <div class="code-timer">
 
                     <span>
-                        ⏱️
+                        ⏱️ صلاحية الرمز
                     </span>
 
-                    <span>
-                        صالح لمدة 10 دقائق
-                    </span>
+                    <strong id="codeTimer">
+                        10:00
+                    </strong>
 
                 </div>
 
-                <div class="info-item">
 
-                    <span>
-                        🔢
-                    </span>
+                <button
+                    class="primary-button"
+                    id="verifyCodeBtn"
+                    type="button"
+                >
+                    ✓ تأكيد الرمز
+                </button>
 
-                    <span>
-                        5 محاولات كحد أقصى
-                    </span>
 
-                </div>
+                <button
+                    class="text-button"
+                    id="backToMicrophoneBtn"
+                    type="button"
+                >
+                    العودة
+                </button>
 
             </div>
 
 
-            <button
-                id="verifyCodeBtn"
-                class="primary-button"
-                type="button"
-                onclick="verifyCode()"
-            >
-
-                <span>
-                    تأكيد الرمز
-                </span>
-
-                <span>
-                    ✓
-                </span>
-
-            </button>
-
+            <!-- =================================================
+                 AUTH MESSAGE
+            ================================================== -->
 
             <div
-                id="codeMessage"
                 class="message hidden"
+                id="authMessage"
+                role="alert"
             ></div>
 
         </section>
 
 
-        <!-- =================================================
-             VOICE SECTION
-        ================================================== -->
+        <!-- =====================================================
+             VOICE CARD
+        ====================================================== -->
 
         <section
-            id="voiceCard"
             class="card voice-card hidden"
+            id="voiceCard"
         >
 
-            <!-- Voice Header -->
+            <!-- HEADER -->
 
             <div class="voice-header">
 
                 <div>
 
-                    <div class="voice-title">
+                    <div class="online-label">
 
-                        <span class="voice-live-dot"></span>
+                        <span class="status-dot"></span>
 
-                        <h2>
-                            CT Voice
-                        </h2>
+                        <span>
+                            CT Voice متصل
+                        </span>
 
                     </div>
 
-                    <p class="voice-user-line">
+                    <h2>
 
-                        مرحباً،
-                        <strong id="voiceUsername">
-                            اللاعب
-                        </strong>
+                        مرحبًا،
+                        <span id="voiceUsername">
+                            -
+                        </span>
 
+                    </h2>
+
+                    <p>
+                        أنت الآن داخل قناة الصوت القريب المدى.
                     </p>
 
                 </div>
 
 
-                <div class="voice-status">
+                <div class="voice-logo">
 
-                    <span
-                        id="statusDot"
-                        class="status-dot"
-                    ></span>
+                    <span class="logo-c">
+                        C
+                    </span>
 
-                    <span id="voiceStatus">
-                        غير متصل بالصوت
+                    <span class="logo-t">
+                        T
                     </span>
 
                 </div>
@@ -390,60 +400,119 @@
             </div>
 
 
-            <!-- Voice Controls -->
+            <!-- =================================================
+                 CURRENT USER
+            ================================================== -->
+
+            <div class="voice-user-card">
+
+                <div class="voice-user-info">
+
+                    <div
+                        class="avatar"
+                        id="userAvatar"
+                    >
+                        C
+                    </div>
+
+                    <div>
+
+                        <strong id="currentPlayerName">
+                            -
+                        </strong>
+
+                        <span id="currentPlayerStatus">
+                            متصل بالصوت
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    class="speaking-indicator"
+                    id="localSpeakingIndicator"
+                >
+                    يتحدث
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 VOICE STATUS
+            ================================================== -->
+
+            <div class="voice-status-box">
+
+                <div class="voice-status-icon">
+                    🎙️
+                </div>
+
+                <div>
+
+                    <strong>
+                        حالة الصوت
+                    </strong>
+
+                    <span id="voiceStatus">
+                        الصوت جاهز
+                    </span>
+
+                </div>
+
+                <span
+                    class="status-dot"
+                    id="statusDot"
+                ></span>
+
+            </div>
+
+
+            <!-- =================================================
+                 VOICE CONTROLS
+            ================================================== -->
 
             <div class="voice-controls">
 
                 <button
-                    id="micButton"
-                    class="voice-control-button mic-control"
+                    class="voice-control mic-control"
+                    id="micToggleBtn"
                     type="button"
-                    onclick="toggleMicrophone()"
                 >
 
                     <span
-                        id="micIcon"
                         class="control-icon"
+                        id="micIcon"
                     >
                         🎙️
                     </span>
 
-                    <span
-                        id="micText"
-                        class="control-text"
-                    >
-                        كتم المايك
+                    <span id="micText">
+                        المايك يعمل
                     </span>
 
                 </button>
 
 
                 <button
+                    class="voice-control leave-control"
                     id="leaveVoiceBtn"
-                    class="voice-control-button leave-control"
                     type="button"
-                    onclick="showLeaveConfirmation()"
                 >
 
                     <span class="control-icon">
                         🚪
                     </span>
 
-                    <span class="control-text">
-                        مغادرة الصوت
+                    <span>
+                        مغادرة CT Voice
                     </span>
 
                 </button>
 
             </div>
-
-
-            <!-- Voice Message -->
-
-            <div
-                id="voiceMessage"
-                class="message hidden"
-            ></div>
 
 
             <!-- =================================================
@@ -452,92 +521,37 @@
 
             <div class="players-section">
 
-                <div class="section-title">
+                <div class="players-title">
 
                     <div>
 
-                        <span class="section-icon">
+                        <span class="players-icon">
                             👥
                         </span>
 
-                        <span>
-                            اللاعبون القريبون
-                        </span>
+                        <strong>
+                            المتصلون
+                        </strong>
 
                     </div>
 
-                    <span class="proximity-label">
-                        Proximity Voice
+                    <span
+                        class="players-count"
+                        id="playersCount"
+                    >
+                        0
                     </span>
 
                 </div>
 
 
                 <div
-                    id="playersList"
                     class="players-list"
+                    id="playersList"
                 >
 
                     <div class="empty-players">
-
-                        <span>
-                            🎧
-                        </span>
-
-                        <p>
-                            لا يوجد لاعبون آخرون متصلون بالصوت حالياً.
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- =================================================
-                 VOICE INFORMATION
-            ================================================== -->
-
-            <div class="voice-info-grid">
-
-                <div class="voice-info-card">
-
-                    <span class="voice-info-icon">
-                        📍
-                    </span>
-
-                    <div>
-
-                        <strong>
-                            صوت قريب
-                        </strong>
-
-                        <small>
-                            مستوى الصوت يتغير حسب المسافة
-                        </small>
-
-                    </div>
-
-                </div>
-
-
-                <div class="voice-info-card">
-
-                    <span class="voice-info-icon">
-                        🎙️
-                    </span>
-
-                    <div>
-
-                        <strong>
-                            المايك الخاص بك
-                        </strong>
-
-                        <small>
-                            يمكنك تشغيله أو كتمه من الزر
-                        </small>
-
+                        لا يوجد لاعبون آخرون متصلون حاليًا.
                     </div>
 
                 </div>
@@ -547,41 +561,37 @@
         </section>
 
 
-        <!-- =================================================
-             ADMIN PANEL
-        ================================================== -->
+        <!-- =====================================================
+             ADMIN CARD
+        ====================================================== -->
 
         <section
-            id="adminCard"
             class="card admin-card hidden"
+            id="adminCard"
         >
 
             <div class="admin-header">
 
                 <div>
 
-                    <div class="admin-title">
-
-                        <span>
-                            🛡️
-                        </span>
-
-                        <h2>
-                            لوحة الإدارة
-                        </h2>
-
+                    <div class="admin-badge">
+                        👑 الإدارة
                     </div>
 
+                    <h2>
+                        لوحة إدارة CT Voice
+                    </h2>
+
                     <p>
-                        إدارة اللاعبين وحالات الصوت.
+                        إدارة المستخدمين والصلاحيات وحالات الصوت.
                     </p>
 
                 </div>
 
 
                 <div
-                    id="adminRole"
                     class="admin-role"
+                    id="adminRole"
                 >
                     -
                 </div>
@@ -589,9 +599,59 @@
             </div>
 
 
+            <!-- ADMIN STATS -->
+
+            <div class="admin-tools">
+
+                <div class="admin-tool">
+
+                    <span>
+                        👥
+                    </span>
+
+                    <div>
+
+                        <strong>
+                            المتصلون
+                        </strong>
+
+                        <small id="adminOnlineCount">
+                            0
+                        </small>
+
+                    </div>
+
+                </div>
+
+
+                <div class="admin-tool">
+
+                    <span>
+                        🔇
+                    </span>
+
+                    <div>
+
+                        <strong>
+                            المكتومون
+                        </strong>
+
+                        <small id="adminMutedCount">
+                            0
+                        </small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ADMIN PLAYERS -->
+
             <div
-                id="adminPlayers"
                 class="admin-players"
+                id="adminPlayers"
             ></div>
 
         </section>
@@ -604,11 +664,11 @@
     ====================================================== -->
 
     <div
+        class="modal-overlay hidden"
         id="leaveModal"
-        class="modal hidden"
     >
 
-        <div class="modal-box">
+        <div class="modal">
 
             <div class="modal-icon">
                 🚪
@@ -623,23 +683,20 @@
             </p>
 
 
-            <div class="modal-actions">
+            <div class="modal-buttons">
 
                 <button
-                    id="confirmLeaveBtn"
                     class="danger-button"
+                    id="confirmLeaveBtn"
                     type="button"
-                    onclick="confirmLeaveVoice()"
                 >
                     مغادرة
                 </button>
 
-
                 <button
-                    id="cancelLeaveBtn"
                     class="secondary-button"
+                    id="cancelLeaveBtn"
                     type="button"
-                    onclick="hideLeaveConfirmation()"
                 >
                     إلغاء
                 </button>
@@ -656,20 +713,40 @@
     ====================================================== -->
 
     <div
-        id="toast"
         class="toast hidden"
-    ></div>
+        id="toast"
+        role="status"
+    >
+
+        <span id="toastIcon">
+            ✓
+        </span>
+
+        <span id="toastText"></span>
+
+    </div>
 
 
     <!-- =====================================================
          FOOTER
     ====================================================== -->
 
-    <footer class="footer">
+    <footer>
 
         <div class="footer-logo">
-            <span class="logo-c">C</span><span class="logo-t">T</span>
-            Voice
+
+            <span class="logo-c">
+                C
+            </span>
+
+            <span class="logo-t">
+                T
+            </span>
+
+            <span>
+                Voice
+            </span>
+
         </div>
 
         <span>
@@ -680,46 +757,13 @@
 
 
     <!-- =====================================================
-         FALLBACK BUTTON FUNCTIONS
-         voice.js will provide the real functions.
+         JAVASCRIPT
     ====================================================== -->
 
-    <script>
-
-        window.addEventListener(
-            "DOMContentLoaded",
-            function () {
-
-                const cancelButton =
-                    document.getElementById(
-                        "cancelLeaveBtn"
-                    );
-
-                if (cancelButton) {
-
-                    cancelButton.addEventListener(
-                        "click",
-                        function () {
-
-                            if (
-                                typeof hideLeaveConfirmation ===
-                                "function"
-                            ) {
-
-                                hideLeaveConfirmation();
-
-                            }
-
-                        }
-                    );
-
-                }
-
-            }
-        );
-
-    </script>
+    <script
+        src="/static/voice.js"
+        defer
+    ></script>
 
 </body>
-
 </html>
