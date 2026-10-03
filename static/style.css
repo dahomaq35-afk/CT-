@@ -1,1 +1,578 @@
-
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+:root {
+    --bg: #07080b;
+    --card: rgba(17, 18, 23, 0.88);
+    --border: rgba(255, 255, 255, 0.09);
+    --text: #f5f5f5;
+    --muted: #92959d;
+    --red: #a71924;
+    --red-dark: #701019;
+    --silver: #aeb2b9;
+}
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+}
+body {
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 50% -10%, rgba(120, 120, 120, 0.10), transparent 35%),
+        radial-gradient(circle at 10% 90%, rgba(167, 25, 36, 0.08), transparent 30%),
+        var(--bg);
+    color: var(--text);
+    font-family:
+        "Tajawal",
+        "Arial",
+        sans-serif;
+    overflow-x: hidden;
+}
+/* =========================================
+   BACKGROUND
+========================================= */
+.background-glow {
+    position: fixed;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    filter: blur(100px);
+    pointer-events: none;
+    opacity: 0.12;
+}
+.glow-one {
+    top: -160px;
+    left: -100px;
+    background: #ffffff;
+}
+.glow-two {
+    right: -140px;
+    bottom: -150px;
+    background: #9e1620;
+}
+/* =========================================
+   APP
+========================================= */
+.app {
+    position: relative;
+    z-index: 1;
+    width: min(92%, 520px);
+    margin: 0 auto;
+    padding:
+        55px 0
+        35px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+/* =========================================
+   HEADER
+========================================= */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-bottom: 35px;
+}
+.logo {
+    font-family: Arial, sans-serif;
+    font-size: 65px;
+    font-weight: 900;
+    letter-spacing: -9px;
+    line-height: 1;
+}
+.logo-c {
+    background: linear-gradient(
+        to bottom,
+        #ffffff 0%,
+        #ffffff 28%,
+        #d9dce0 55%,
+        #8e939b 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter:
+        drop-shadow(0 0 12px rgba(255,255,255,0.10));
+}
+.logo-t {
+    background: linear-gradient(
+        to bottom,
+        #d32935 0%,
+        #ad1824 45%,
+        #680d15 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    filter:
+        drop-shadow(0 0 14px rgba(167,25,36,0.20));
+}
+.brand {
+    text-align: right;
+}
+.brand h1 {
+    font-size: 23px;
+    font-weight: 900;
+    letter-spacing: 2px;
+}
+.brand p {
+    margin-top: 5px;
+    color: var(--muted);
+    font-size: 12px;
+}
+/* =========================================
+   CARD
+========================================= */
+.card {
+    width: 100%;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,0.045),
+            rgba(255,255,255,0.012)
+        ),
+        var(--card);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 30px;
+    box-shadow:
+        0 25px 70px rgba(0,0,0,0.38),
+        inset 0 1px 0 rgba(255,255,255,0.035);
+    backdrop-filter: blur(18px);
+    animation: cardIn 0.35s ease;
+}
+@keyframes cardIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.card-icon {
+    width: 58px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 18px;
+    border-radius: 17px;
+    background: rgba(255,255,255,0.055);
+    border: 1px solid rgba(255,255,255,0.08);
+    font-size: 25px;
+}
+.success-icon {
+    color: #ffffff;
+    background: rgba(255,255,255,0.07);
+}
+.card h2 {
+    font-size: 23px;
+    margin-bottom: 9px;
+}
+.description {
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.8;
+}
+/* =========================================
+   INPUT
+========================================= */
+.input-group {
+    margin-top: 24px;
+}
+.input-group label {
+    display: block;
+    margin-bottom: 9px;
+    color: #c9cbd0;
+    font-size: 13px;
+    font-weight: 700;
+}
+input {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.10);
+    outline: none;
+    border-radius: 14px;
+    padding: 15px 16px;
+    background: rgba(0,0,0,0.25);
+    color: #ffffff;
+    font-size: 15px;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s,
+        background 0.2s;
+}
+input::placeholder {
+    color: #656871;
+}
+input:focus {
+    border-color: rgba(190,190,190,0.35);
+    background: rgba(255,255,255,0.035);
+    box-shadow:
+        0 0 0 4px rgba(255,255,255,0.035);
+}
+/* =========================================
+   BUTTONS
+========================================= */
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+.primary-button {
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 15px;
+    margin-top: 20px;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    background:
+        linear-gradient(
+            135deg,
+            #b51b27,
+            #791019
+        );
+    box-shadow:
+        0 12px 28px rgba(120, 15, 25, 0.20);
+    transition:
+        transform 0.2s,
+        filter 0.2s;
+}
+.primary-button:hover {
+    filter: brightness(1.12);
+    transform: translateY(-1px);
+}
+.primary-button:active {
+    transform: translateY(0);
+}
+.secondary-button {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    padding: 15px;
+    margin-top: 20px;
+    background: rgba(255,255,255,0.035);
+    color: #d8d9dd;
+    font-size: 14px;
+    font-weight: 800;
+    transition: background 0.2s;
+}
+.secondary-button:hover {
+    background: rgba(255,255,255,0.07);
+}
+/* =========================================
+   MESSAGE
+========================================= */
+.message {
+    margin-top: 16px;
+    padding: 13px 14px;
+    border-radius: 13px;
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.07);
+    color: #d5d7dc;
+    font-size: 13px;
+    line-height: 1.7;
+}
+.hidden {
+    display: none !important;
+}
+/* =========================================
+   QUESTION
+========================================= */
+.question-box {
+    margin-top: 22px;
+    padding: 18px;
+    border-radius: 15px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.07);
+}
+.question-box strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 7px;
+}
+.question-box span {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+}
+.button-row {
+    display: grid;
+    grid-template-columns: 1fr 0.65fr;
+    gap: 10px;
+    margin-top: 5px;
+}
+.button-row .primary-button,
+.button-row .secondary-button {
+    margin-top: 15px;
+}
+/* =========================================
+   CODE
+========================================= */
+.code-input-wrapper {
+    margin-top: 24px;
+}
+#verificationCode {
+    text-align: center;
+    direction: ltr;
+    font-size: 24px;
+    font-weight: 900;
+    letter-spacing: 7px;
+    padding: 17px 10px;
+}
+/* =========================================
+   VOICE
+========================================= */
+.voice-card {
+    position: relative;
+}
+.voice-status {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 24px;
+    color: #cfd1d6;
+    font-size: 13px;
+    font-weight: 700;
+}
+.status-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #d8d8d8;
+    box-shadow:
+        0 0 13px rgba(255,255,255,0.35);
+}
+.voice-user {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    padding: 15px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.avatar {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            145deg,
+            #ffffff,
+            #8d9299
+        );
+    color: #0a0b0e;
+    font-size: 22px;
+    font-weight: 900;
+}
+.voice-user strong {
+    display: block;
+    font-size: 14px;
+}
+.voice-user span {
+    display: block;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 11px;
+}
+.voice-controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+}
+.voice-button {
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.045);
+    color: #e6e7ea;
+    font-size: 13px;
+    font-weight: 800;
+    transition:
+        background 0.2s,
+        transform 0.2s;
+}
+.voice-button:hover {
+    background: rgba(255,255,255,0.08);
+    transform: translateY(-1px);
+}
+.leave-button {
+    border-color: rgba(167,25,36,0.28);
+    color: #e3aeb2;
+    background: rgba(167,25,36,0.08);
+}
+.leave-button:hover {
+    background: rgba(167,25,36,0.14);
+}
+/* =========================================
+   CONFIRMATION MODAL
+========================================= */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(8px);
+    animation: modalFade 0.2s ease;
+}
+@keyframes modalFade {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+.confirm-modal {
+    width: min(100%, 390px);
+    padding: 28px;
+    text-align: center;
+    border-radius: 22px;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(29,30,36,0.98),
+            rgba(12,13,17,0.98)
+        );
+    border: 1px solid rgba(255,255,255,0.10);
+    box-shadow:
+        0 30px 90px rgba(0,0,0,0.60);
+    animation: modalIn 0.25s ease;
+}
+@keyframes modalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+.confirm-icon {
+    width: 58px;
+    height: 58px;
+    margin: 0 auto 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 17px;
+    background: rgba(167,25,36,0.10);
+    border: 1px solid rgba(167,25,36,0.20);
+    font-size: 24px;
+}
+.confirm-modal h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+}
+.confirm-modal p {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.8;
+}
+.confirm-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 23px;
+}
+.confirm-buttons button {
+    border-radius: 13px;
+    padding: 13px;
+    font-size: 13px;
+    font-weight: 800;
+}
+.confirm-leave {
+    border: none;
+    color: #ffffff;
+    background:
+        linear-gradient(
+            135deg,
+            #ad1925,
+            #701018
+        );
+}
+.confirm-cancel {
+    border: 1px solid rgba(255,255,255,0.09);
+    color: #d6d7db;
+    background: rgba(255,255,255,0.04);
+}
+/* =========================================
+   FOOTER
+========================================= */
+footer {
+    margin-top: auto;
+    padding-top: 28px;
+    text-align: center;
+    color: #5f6269;
+    font-size: 11px;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+footer span:first-child {
+    color: #999da4;
+    font-weight: 800;
+}
+/* =========================================
+   MOBILE
+========================================= */
+@media (max-width: 600px) {
+    .app {
+        width: 92%;
+        padding-top: 35px;
+    }
+    .header {
+        gap: 13px;
+        margin-bottom: 25px;
+    }
+    .logo {
+        font-size: 53px;
+    }
+    .brand h1 {
+        font-size: 19px;
+    }
+    .brand p {
+        font-size: 10px;
+    }
+    .card {
+        padding: 23px;
+        border-radius: 19px;
+    }
+    .card h2 {
+        font-size: 20px;
+    }
+    .voice-controls {
+        grid-template-columns: 1fr;
+    }
+    .button-row {
+        grid-template-columns: 1fr;
+    }
+    .confirm-buttons {
+        grid-template-columns: 1fr;
+    }
+    #verificationCode {
+        font-size: 21px;
+        letter-spacing: 5px;
+    }
+}
