@@ -1,6 +1,7 @@
 // =========================================================
 // CT VOICE - voice.js
-// FIXED AUTH ERRORS VERSION
+// FULL FIXED VERSION
+// Compatible with current index.html + mini.py
 // =========================================================
 
 let currentUsername = "";
@@ -20,17 +21,23 @@ let connectedToVoice = false;
 // ELEMENTS
 // =========================================================
 
-const verificationCard =
-    document.getElementById("verificationCard");
+const authCard =
+    document.getElementById("authCard");
 
-const microphoneCard =
-    document.getElementById("microphoneCard");
+const usernameStep =
+    document.getElementById("usernameStep");
 
-const codeCard =
-    document.getElementById("codeCard");
+const microphoneStep =
+    document.getElementById("microphoneStep");
+
+const codeStep =
+    document.getElementById("codeStep");
 
 const voiceCard =
     document.getElementById("voiceCard");
+
+const adminCard =
+    document.getElementById("adminCard");
 
 const usernameInput =
     document.getElementById("username");
@@ -38,21 +45,35 @@ const usernameInput =
 const verificationCode =
     document.getElementById("verificationCode");
 
-const message =
-    document.getElementById("message");
+const authMessage =
+    document.getElementById("authMessage");
 
-const declineMessage =
-    document.getElementById("declineMessage");
-
-const codeMessage =
-    document.getElementById("codeMessage");
-
-const voiceMessage =
-    document.getElementById("voiceMessage");
-
-const checkButton =
-    document.getElementById("checkButton") ||
+const verifyAccountBtn =
     document.getElementById("verifyAccountBtn");
+
+const microphoneYesBtn =
+    document.getElementById("microphoneYesBtn");
+
+const microphoneNoBtn =
+    document.getElementById("microphoneNoBtn");
+
+const verifyCodeBtn =
+    document.getElementById("verifyCodeBtn");
+
+const backToMicrophoneBtn =
+    document.getElementById("backToMicrophoneBtn");
+
+const micToggleBtn =
+    document.getElementById("micToggleBtn");
+
+const leaveVoiceBtn =
+    document.getElementById("leaveVoiceBtn");
+
+const confirmLeaveBtn =
+    document.getElementById("confirmLeaveBtn");
+
+const cancelLeaveBtn =
+    document.getElementById("cancelLeaveBtn");
 
 
 // =========================================================
@@ -73,64 +94,67 @@ function hideElement(element) {
 }
 
 
-function showMessage(element, text) {
-    if (!element) {
+function showMessage(text) {
+
+    if (!authMessage) {
         console.error(
-            "[CT Voice] Message element not found:",
+            "[CT Voice] authMessage not found:",
             text
         );
         return;
     }
 
-    element.textContent = text;
-    element.classList.remove("hidden");
+    authMessage.textContent = text;
+    authMessage.classList.remove("hidden");
 }
 
 
-function clearMessage(element) {
-    if (!element) return;
+function clearMessage() {
 
-    element.textContent = "";
-    element.classList.add("hidden");
+    if (!authMessage) return;
+
+    authMessage.textContent = "";
+    authMessage.classList.add("hidden");
 }
 
 
-function setButtonLoading(button, loading, text) {
+function setButtonLoading(
+    button,
+    loading,
+    loadingText = "جارٍ التحقق..."
+) {
 
     if (!button) return;
 
     if (loading) {
 
         if (!button.dataset.originalText) {
-
             button.dataset.originalText =
                 button.textContent;
         }
 
         button.disabled = true;
-
-        button.textContent =
-            text || "جارٍ التحقق...";
+        button.textContent = loadingText;
 
     } else {
 
         button.disabled = false;
 
-        button.textContent =
-            button.dataset.originalText ||
-            "تحقق";
+        if (button.dataset.originalText) {
+            button.textContent =
+                button.dataset.originalText;
+        }
     }
 }
 
 
 // =========================================================
-// READ SERVER RESPONSE SAFELY
+// SAFE RESPONSE
 // =========================================================
 
 async function readResponse(response) {
 
-    const raw =
-        await response.text();
+    const raw = await response.text();
 
     if (!raw) {
 
@@ -174,20 +198,19 @@ async function requestVerification() {
             ? usernameInput.value.trim()
             : "";
 
-    clearMessage(message);
+    clearMessage();
 
     if (!username) {
 
         showMessage(
-            message,
-            "اكتب اسم حساب Roblox أولاً."
+            "❌ اكتب اسم حساب Roblox أولاً."
         );
 
         return;
     }
 
     setButtonLoading(
-        checkButton,
+        verifyAccountBtn,
         true,
         "جارٍ البحث..."
     );
@@ -232,10 +255,8 @@ async function requestVerification() {
             clearTimeout(timeout);
         }
 
-
         const data =
             await readResponse(response);
-
 
         console.log(
             "[CT Voice] Auth Response:",
@@ -243,9 +264,8 @@ async function requestVerification() {
             data
         );
 
-
         setButtonLoading(
-            checkButton,
+            verifyAccountBtn,
             false
         );
 
@@ -260,7 +280,6 @@ async function requestVerification() {
         ) {
 
             showMessage(
-                message,
                 "❌ " +
                 (
                     data.message ||
@@ -282,7 +301,6 @@ async function requestVerification() {
         ) {
 
             showMessage(
-                message,
                 "⚠️ " +
                 (
                     data.message ||
@@ -303,18 +321,20 @@ async function requestVerification() {
             "declined_cooldown"
         ) {
 
+            const seconds =
+                Number(
+                    data.remaining || 300
+                );
+
             const minutes =
                 Math.max(
                     1,
                     Math.ceil(
-                        Number(
-                            data.remaining || 300
-                        ) / 60
+                        seconds / 60
                     )
                 );
 
             showMessage(
-                message,
                 `⏳ رفضت تفعيل المايك. حاول بعد ${minutes} دقيقة.`
             );
 
@@ -332,7 +352,6 @@ async function requestVerification() {
         ) {
 
             showMessage(
-                message,
                 "❌ " +
                 (
                     data.message ||
@@ -361,45 +380,55 @@ async function requestVerification() {
                 Number(data.user_id);
 
 
+            const foundUsername =
+                document.getElementById(
+                    "foundUsername"
+                );
+
+            if (foundUsername) {
+
+                foundUsername.textContent =
+                    `تم العثور على حساب: ${currentUsername}`;
+            }
+
+
             hideElement(
-                verificationCard
+                usernameStep
+            );
+
+            hideElement(
+                codeStep
             );
 
             showElement(
-                microphoneCard
+                microphoneStep
             );
 
-
-            clearMessage(
-                message
-            );
-
-            clearMessage(
-                declineMessage
-            );
+            clearMessage();
 
             return;
         }
 
 
         // =================================================
-        // ANY OTHER SERVER MESSAGE
+        // OTHER SERVER ERROR
         // =================================================
 
         showMessage(
-            message,
-            data.message ||
-            data.detail ||
-            `حدث خطأ من السيرفر. HTTP ${response.status}`
+            "❌ " +
+            (
+                data.message ||
+                data.detail ||
+                `حدث خطأ من السيرفر. HTTP ${response.status}`
+            )
         );
 
     } catch (error) {
 
         setButtonLoading(
-            checkButton,
+            verifyAccountBtn,
             false
         );
-
 
         if (
             error &&
@@ -407,18 +436,15 @@ async function requestVerification() {
         ) {
 
             showMessage(
-                message,
                 "⏱️ السيرفر تأخر في الرد. حاول مرة أخرى."
             );
 
         } else {
 
             showMessage(
-                message,
                 "❌ تعذر الاتصال بالسيرفر. حاول مرة أخرى."
             );
         }
-
 
         console.error(
             "[CT Voice] Auth Error:",
@@ -434,21 +460,22 @@ async function requestVerification() {
 
 async function acceptMicrophone() {
 
-    clearMessage(
-        declineMessage
-    );
-
+    clearMessage();
 
     if (!currentUsername) {
 
         showMessage(
-            declineMessage,
-            "انتهت جلسة التحقق. أعد المحاولة."
+            "❌ انتهت جلسة التحقق. أعد المحاولة."
         );
 
         return;
     }
 
+    setButtonLoading(
+        microphoneYesBtn,
+        true,
+        "جارٍ إنشاء الرمز..."
+    );
 
     try {
 
@@ -470,15 +497,18 @@ async function acceptMicrophone() {
                 }
             );
 
-
         const data =
             await readResponse(response);
-
 
         console.log(
             "[CT Voice] Code Request:",
             response.status,
             data
+        );
+
+        setButtonLoading(
+            microphoneYesBtn,
+            false
         );
 
 
@@ -487,12 +517,30 @@ async function acceptMicrophone() {
             !data.success
         ) {
 
-            showMessage(
-                declineMessage,
-                data.message ||
-                data.detail ||
-                "تعذر إنشاء رمز التحقق."
-            );
+            if (
+                data.status ===
+                "not_in_game"
+            ) {
+
+                showMessage(
+                    "⚠️ " +
+                    (
+                        data.message ||
+                        "يجب أن تكون داخل سيرفر CT."
+                    )
+                );
+
+            } else {
+
+                showMessage(
+                    "❌ " +
+                    (
+                        data.message ||
+                        data.detail ||
+                        "تعذر إنشاء رمز التحقق."
+                    )
+                );
+            }
 
             return;
         }
@@ -506,12 +554,23 @@ async function acceptMicrophone() {
             currentUsername;
 
 
+        const codeUsername =
+            document.getElementById(
+                "codeUsername"
+            );
+
+        if (codeUsername) {
+            codeUsername.textContent =
+                currentUsername;
+        }
+
+
         hideElement(
-            microphoneCard
+            microphoneStep
         );
 
         showElement(
-            codeCard
+            codeStep
         );
 
 
@@ -519,18 +578,25 @@ async function acceptMicrophone() {
 
             verificationCode.value = "";
 
-            verificationCode.focus();
+            setTimeout(
+                () => verificationCode.focus(),
+                100
+            );
         }
 
 
-        clearMessage(
-            codeMessage
-        );
+        startCodeTimer();
+
+        clearMessage();
 
     } catch (error) {
 
+        setButtonLoading(
+            microphoneYesBtn,
+            false
+        );
+
         showMessage(
-            declineMessage,
             "❌ تعذر الاتصال بالسيرفر."
         );
 
@@ -548,24 +614,26 @@ async function acceptMicrophone() {
 
 async function declineMicrophone() {
 
-    clearMessage(
-        declineMessage
-    );
-
+    clearMessage();
 
     if (!currentUsername) {
 
         hideElement(
-            microphoneCard
+            microphoneStep
         );
 
         showElement(
-            verificationCard
+            usernameStep
         );
 
         return;
     }
 
+    setButtonLoading(
+        microphoneNoBtn,
+        true,
+        "جارٍ..."
+    );
 
     try {
 
@@ -592,19 +660,142 @@ async function declineMicrophone() {
             "[CT Voice] Decline Error:",
             error
         );
+
+    } finally {
+
+        setButtonLoading(
+            microphoneNoBtn,
+            false
+        );
     }
 
-
-    hideElement(
-        microphoneCard
-    );
 
     currentUsername = "";
     currentUserId = null;
 
-    showElement(
-        verificationCard
+    hideElement(
+        microphoneStep
     );
+
+    hideElement(
+        codeStep
+    );
+
+    showElement(
+        usernameStep
+    );
+
+    clearMessage();
+}
+
+
+// =========================================================
+// CODE TIMER
+// =========================================================
+
+let codeTimerInterval = null;
+
+function startCodeTimer() {
+
+    stopCodeTimer();
+
+    let remaining = 600;
+
+    updateCodeTimer(
+        remaining
+    );
+
+    codeTimerInterval =
+        setInterval(
+            () => {
+
+                remaining--;
+
+                updateCodeTimer(
+                    remaining
+                );
+
+                if (
+                    remaining <= 0
+                ) {
+
+                    stopCodeTimer();
+
+                    showMessage(
+                        "⏳ انتهت صلاحية رمز التحقق. اضغط العودة ثم أعد المحاولة."
+                    );
+                }
+
+            },
+            1000
+        );
+}
+
+
+function stopCodeTimer() {
+
+    if (codeTimerInterval) {
+
+        clearInterval(
+            codeTimerInterval
+        );
+
+        codeTimerInterval = null;
+    }
+}
+
+
+function updateCodeTimer(
+    seconds
+) {
+
+    const timer =
+        document.getElementById(
+            "codeTimer"
+        );
+
+    if (!timer) return;
+
+    const safeSeconds =
+        Math.max(
+            0,
+            Number(seconds)
+        );
+
+    const minutes =
+        Math.floor(
+            safeSeconds / 60
+        );
+
+    const secs =
+        safeSeconds % 60;
+
+    timer.textContent =
+        `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
+
+// =========================================================
+// BACK TO MICROPHONE
+// =========================================================
+
+function backToMicrophone() {
+
+    stopCodeTimer();
+
+    clearMessage();
+
+    hideElement(
+        codeStep
+    );
+
+    showElement(
+        microphoneStep
+    );
+
+    if (verificationCode) {
+        verificationCode.value = "";
+    }
 }
 
 
@@ -621,11 +812,7 @@ async function verifyCode() {
                 .toUpperCase()
             : "";
 
-
-    clearMessage(
-        codeMessage
-    );
-
+    clearMessage();
 
     if (
         !currentUsername ||
@@ -633,8 +820,7 @@ async function verifyCode() {
     ) {
 
         showMessage(
-            codeMessage,
-            "انتهت جلسة التحقق. ابدأ من جديد."
+            "❌ انتهت جلسة التحقق. ابدأ من جديد."
         );
 
         return;
@@ -644,13 +830,18 @@ async function verifyCode() {
     if (code.length !== 8) {
 
         showMessage(
-            codeMessage,
-            "رمز التحقق يجب أن يكون 8 خانات."
+            "❌ رمز التحقق يجب أن يكون 8 خانات."
         );
 
         return;
     }
 
+
+    setButtonLoading(
+        verifyCodeBtn,
+        true,
+        "جارٍ التحقق..."
+    );
 
     try {
 
@@ -675,15 +866,18 @@ async function verifyCode() {
                 }
             );
 
-
         const data =
             await readResponse(response);
-
 
         console.log(
             "[CT Voice] Verify Response:",
             response.status,
             data
+        );
+
+        setButtonLoading(
+            verifyCodeBtn,
+            false
         );
 
 
@@ -696,9 +890,23 @@ async function verifyCode() {
             "wrong_code"
         ) {
 
+            const remaining =
+                data.remaining_attempts;
+
+            let text =
+                data.message ||
+                "رمز التحقق غير صحيح.";
+
+            if (
+                remaining !== undefined
+            ) {
+
+                text +=
+                    ` المحاولات المتبقية: ${remaining}`;
+            }
+
             showMessage(
-                codeMessage,
-                `❌ ${data.message || "رمز التحقق غير صحيح."} المحاولات المتبقية: ${data.remaining_attempts}`
+                "❌ " + text
             );
 
             if (verificationCode) {
@@ -719,7 +927,6 @@ async function verifyCode() {
         ) {
 
             showMessage(
-                codeMessage,
                 "⏳ " +
                 (
                     data.message ||
@@ -741,7 +948,6 @@ async function verifyCode() {
         ) {
 
             showMessage(
-                codeMessage,
                 "❌ " +
                 (
                     data.message ||
@@ -754,7 +960,7 @@ async function verifyCode() {
 
 
         // =================================================
-        // PLAYER LEFT
+        // NOT IN GAME
         // =================================================
 
         if (
@@ -763,7 +969,6 @@ async function verifyCode() {
         ) {
 
             showMessage(
-                codeMessage,
                 "⚠️ " +
                 (
                     data.message ||
@@ -792,8 +997,10 @@ async function verifyCode() {
                 currentUsername;
 
 
+            stopCodeTimer();
+
             hideElement(
-                codeCard
+                authCard
             );
 
             showElement(
@@ -806,11 +1013,34 @@ async function verifyCode() {
                     "voiceUsername"
                 );
 
-
             if (voiceUsername) {
-
                 voiceUsername.textContent =
                     currentUsername;
+            }
+
+
+            const currentPlayerName =
+                document.getElementById(
+                    "currentPlayerName"
+                );
+
+            if (currentPlayerName) {
+                currentPlayerName.textContent =
+                    currentUsername;
+            }
+
+
+            const userAvatar =
+                document.getElementById(
+                    "userAvatar"
+                );
+
+            if (userAvatar) {
+
+                userAvatar.textContent =
+                    currentUsername
+                        .charAt(0)
+                        .toUpperCase();
             }
 
 
@@ -825,16 +1055,22 @@ async function verifyCode() {
 
 
         showMessage(
-            codeMessage,
-            data.message ||
-            data.detail ||
-            "رمز التحقق غير صحيح."
+            "❌ " +
+            (
+                data.message ||
+                data.detail ||
+                "تعذر التحقق من الرمز."
+            )
         );
 
     } catch (error) {
 
+        setButtonLoading(
+            verifyCodeBtn,
+            false
+        );
+
         showMessage(
-            codeMessage,
             "❌ تعذر الاتصال بالسيرفر."
         );
 
@@ -847,21 +1083,15 @@ async function verifyCode() {
 
 
 // =========================================================
-// CONNECT TO LIVEKIT
+// CONNECT LIVEKIT
 // =========================================================
 
 async function connectToVoice() {
 
-    clearMessage(
-        voiceMessage
-    );
-
-
     if (!currentUserId) {
 
         showMessage(
-            voiceMessage,
-            "تعذر تحديد حساب Roblox."
+            "❌ تعذر تحديد حساب Roblox."
         );
 
         return;
@@ -871,8 +1101,7 @@ async function connectToVoice() {
     if (!window.LivekitClient) {
 
         showMessage(
-            voiceMessage,
-            "تعذر تحميل نظام الصوت."
+            "❌ تعذر تحميل نظام الصوت."
         );
 
         return;
@@ -899,7 +1128,6 @@ async function connectToVoice() {
                 }
             );
 
-
         const data =
             await readResponse(response);
 
@@ -910,10 +1138,12 @@ async function connectToVoice() {
         ) {
 
             showMessage(
-                voiceMessage,
-                data.message ||
-                data.detail ||
-                "تعذر إنشاء اتصال الصوت."
+                "❌ " +
+                (
+                    data.message ||
+                    data.detail ||
+                    "تعذر إنشاء اتصال الصوت."
+                )
             );
 
             return;
@@ -927,25 +1157,34 @@ async function connectToVoice() {
             });
 
 
+        // =================================================
+        // DISCONNECTED
+        // =================================================
+
         livekitRoom.on(
             LivekitClient.RoomEvent.Disconnected,
             () => {
 
                 localAudioTrack = null;
-
                 connectedToVoice = false;
 
                 setVoiceStatus(
                     "غير متصل بالصوت",
                     false
                 );
+
+                updateCurrentStatus();
             }
         );
 
 
+        // =================================================
+        // ACTIVE SPEAKERS
+        // =================================================
+
         livekitRoom.on(
             LivekitClient.RoomEvent.ActiveSpeakersChanged,
-            (speakers) => {
+            speakers => {
 
                 handleActiveSpeakers(
                     speakers
@@ -962,12 +1201,20 @@ async function connectToVoice() {
                             ) === myIdentity
                     );
 
+                updateLocalSpeaking(
+                    amISpeaking
+                );
+
                 sendVoiceState(
                     amISpeaking
                 );
             }
         );
 
+
+        // =================================================
+        // PLAYER CONNECTED
+        // =================================================
 
         livekitRoom.on(
             LivekitClient.RoomEvent.ParticipantConnected,
@@ -980,6 +1227,10 @@ async function connectToVoice() {
             }
         );
 
+
+        // =================================================
+        // PLAYER DISCONNECTED
+        // =================================================
 
         livekitRoom.on(
             LivekitClient.RoomEvent.ParticipantDisconnected,
@@ -997,6 +1248,10 @@ async function connectToVoice() {
         );
 
 
+        // =================================================
+        // AUDIO TRACK
+        // =================================================
+
         livekitRoom.on(
             LivekitClient.RoomEvent.TrackSubscribed,
             (
@@ -1012,18 +1267,15 @@ async function connectToVoice() {
                     return;
                 }
 
-
                 try {
 
                     const element =
                         track.attach();
 
-
                     element.dataset.userId =
                         String(
                             participant.identity
                         );
-
 
                     element.autoplay = true;
 
@@ -1035,11 +1287,21 @@ async function connectToVoice() {
                     element.style.display =
                         "none";
 
+                    element.volume = 1;
 
                     document.body.appendChild(
                         element
                     );
 
+                    element.play()
+                        .catch(
+                            error => {
+                                console.warn(
+                                    "[CT Voice] Audio play waiting:",
+                                    error
+                                );
+                            }
+                        );
 
                     console.log(
                         "[CT Voice] Audio connected:",
@@ -1057,11 +1319,13 @@ async function connectToVoice() {
         );
 
 
+        // =================================================
+        // AUDIO TRACK REMOVED
+        // =================================================
+
         livekitRoom.on(
             LivekitClient.RoomEvent.TrackUnsubscribed,
-            (
-                track
-            ) => {
+            track => {
 
                 try {
                     track.detach();
@@ -1069,6 +1333,10 @@ async function connectToVoice() {
             }
         );
 
+
+        // =================================================
+        // CONNECT
+        // =================================================
 
         await livekitRoom.connect(
             data.url,
@@ -1087,6 +1355,13 @@ async function connectToVoice() {
             true
         );
 
+        updateCurrentStatus();
+
+
+        console.log(
+            "[CT Voice] Connected successfully."
+        );
+
     } catch (error) {
 
         console.error(
@@ -1096,9 +1371,15 @@ async function connectToVoice() {
 
         connectedToVoice = false;
 
+        setVoiceStatus(
+            "تعذر الاتصال بالصوت",
+            false
+        );
+
+        updateCurrentStatus();
+
         showMessage(
-            voiceMessage,
-            "تعذر الاتصال بخدمة الصوت."
+            "❌ تعذر الاتصال بخدمة الصوت."
         );
     }
 }
@@ -1111,7 +1392,6 @@ async function connectToVoice() {
 async function enableMicrophone() {
 
     if (!livekitRoom) return;
-
 
     try {
 
@@ -1156,8 +1436,7 @@ async function enableMicrophone() {
         );
 
         showMessage(
-            voiceMessage,
-            "تعذر تشغيل المايك. تأكد من السماح للموقع باستخدام الميكروفون."
+            "⚠️ تعذر تشغيل المايك. تأكد من السماح للموقع باستخدام الميكروفون."
         );
     }
 }
@@ -1169,7 +1448,14 @@ async function enableMicrophone() {
 
 async function toggleMicrophone() {
 
-    if (!livekitRoom) return;
+    if (!livekitRoom) {
+
+        showMessage(
+            "❌ أنت غير متصل بالصوت."
+        );
+
+        return;
+    }
 
 
     try {
@@ -1201,18 +1487,24 @@ async function toggleMicrophone() {
         );
 
         showMessage(
-            voiceMessage,
-            "تعذر تغيير حالة المايك."
+            "❌ تعذر تغيير حالة المايك."
         );
     }
 }
 
 
 // =========================================================
-// MICROPHONE BUTTON
+// MICROPHONE BUTTON UI
 // =========================================================
 
 function updateMicrophoneButton() {
+
+    if (
+        !micToggleBtn
+    ) {
+        return;
+    }
+
 
     const micIcon =
         document.getElementById(
@@ -1224,42 +1516,38 @@ function updateMicrophoneButton() {
             "micText"
         );
 
-    const micButton =
-        document.getElementById(
-            "micButton"
-        );
-
 
     if (
-        !micIcon ||
-        !micText ||
-        !micButton
+        isMicrophoneMuted
     ) {
-        return;
-    }
 
+        if (micIcon) {
+            micIcon.textContent =
+                "🔇";
+        }
 
-    if (isMicrophoneMuted) {
+        if (micText) {
+            micText.textContent =
+                "فتح المايك";
+        }
 
-        micIcon.textContent =
-            "🔇";
-
-        micText.textContent =
-            "فتح المايك";
-
-        micButton.classList.add(
+        micToggleBtn.classList.add(
             "muted"
         );
 
     } else {
 
-        micIcon.textContent =
-            "🎙️";
+        if (micIcon) {
+            micIcon.textContent =
+                "🎙️";
+        }
 
-        micText.textContent =
-            "كتم المايك";
+        if (micText) {
+            micText.textContent =
+                "كتم المايك";
+        }
 
-        micButton.classList.remove(
+        micToggleBtn.classList.remove(
             "muted"
         );
     }
@@ -1287,17 +1575,80 @@ function setVoiceStatus(
 
 
     if (status) {
-        status.textContent = text;
+        status.textContent =
+            text;
     }
 
 
     if (dot) {
 
         if (connected) {
-            dot.classList.add("connected");
+
+            dot.classList.add(
+                "connected"
+            );
+
         } else {
-            dot.classList.remove("connected");
+
+            dot.classList.remove(
+                "connected"
+            );
         }
+    }
+}
+
+
+function updateCurrentStatus() {
+
+    const status =
+        document.getElementById(
+            "currentPlayerStatus"
+        );
+
+    if (!status) return;
+
+    if (!connectedToVoice) {
+
+        status.textContent =
+            "غير متصل بالصوت";
+
+    } else if (
+        isMicrophoneMuted
+    ) {
+
+        status.textContent =
+            "المايك مكتوم";
+
+    } else {
+
+        status.textContent =
+            "متصل بالصوت";
+    }
+}
+
+
+function updateLocalSpeaking(
+    speaking
+) {
+
+    const indicator =
+        document.getElementById(
+            "localSpeakingIndicator"
+        );
+
+    if (!indicator) return;
+
+    if (speaking) {
+
+        indicator.classList.add(
+            "active"
+        );
+
+    } else {
+
+        indicator.classList.remove(
+            "active"
+        );
     }
 }
 
@@ -1314,6 +1665,7 @@ function showLeaveConfirmation() {
         );
 
     if (modal) {
+
         modal.classList.remove(
             "hidden"
         );
@@ -1329,6 +1681,7 @@ function hideLeaveConfirmation() {
         );
 
     if (modal) {
+
         modal.classList.add(
             "hidden"
         );
@@ -1356,6 +1709,7 @@ async function leaveVoice() {
 
     stopVerificationStatus();
     stopPlayersRefresh();
+    stopCodeTimer();
 
 
     if (currentUserId) {
@@ -1424,9 +1778,7 @@ async function leaveVoice() {
 
 
     localAudioTrack = null;
-
     connectedToVoice = false;
-
     isMicrophoneMuted = false;
 
     currentUsername = "";
@@ -1438,11 +1790,25 @@ async function leaveVoice() {
     }
 
 
-    hideElement(voiceCard);
-    hideElement(codeCard);
-    hideElement(microphoneCard);
+    hideElement(
+        voiceCard
+    );
 
-    showElement(verificationCard);
+    hideElement(
+        codeStep
+    );
+
+    hideElement(
+        microphoneStep
+    );
+
+    showElement(
+        authCard
+    );
+
+    showElement(
+        usernameStep
+    );
 
 
     if (usernameInput) {
@@ -1450,9 +1816,7 @@ async function leaveVoice() {
     }
 
 
-    clearMessage(message);
-    clearMessage(codeMessage);
-    clearMessage(voiceMessage);
+    clearMessage();
 
 
     setVoiceStatus(
@@ -1461,6 +1825,7 @@ async function leaveVoice() {
     );
 
     updateMicrophoneButton();
+    updateCurrentStatus();
 }
 
 
@@ -1504,10 +1869,16 @@ async function checkVerificationStatus() {
             stopPlayersRefresh();
 
 
-            hideElement(voiceCard);
+            hideElement(
+                voiceCard
+            );
 
             showElement(
-                verificationCard
+                authCard
+            );
+
+            showElement(
+                usernameStep
             );
 
 
@@ -1516,7 +1887,6 @@ async function checkVerificationStatus() {
 
 
             showMessage(
-                message,
                 "⚠️ خرجت من سيرفر CT. يجب إعادة التحقق عند دخولك مرة أخرى."
             );
         }
@@ -1608,7 +1978,9 @@ async function updatePlayers() {
             );
 
 
-        if (!response.ok) return;
+        if (!response.ok) {
+            return;
+        }
 
 
         const data =
@@ -1656,24 +2028,55 @@ function updatePlayersList(
             "playersList"
         );
 
+    const count =
+        document.getElementById(
+            "playersCount"
+        );
+
 
     if (!container) return;
+
+
+    const others =
+        players.filter(
+            player =>
+                Number(
+                    player.user_id
+                ) !==
+                Number(
+                    currentUserId
+                )
+        );
+
+
+    if (count) {
+
+        count.textContent =
+            String(
+                others.length
+            );
+    }
 
 
     container.innerHTML = "";
 
 
-    for (
-        const player of players
+    if (
+        others.length === 0
     ) {
 
-        if (
-            Number(player.user_id) ===
-            Number(currentUserId)
-        ) {
-            continue;
-        }
+        container.innerHTML =
+            `<div class="empty-players">
+                لا يوجد لاعبون آخرون متصلون حاليًا.
+            </div>`;
 
+        return;
+    }
+
+
+    for (
+        const player of others
+    ) {
 
         const item =
             document.createElement(
@@ -1686,10 +2089,13 @@ function updatePlayersList(
 
 
         item.dataset.userId =
-            String(player.user_id);
+            String(
+                player.user_id
+            );
 
 
         if (player.speaking) {
+
             item.classList.add(
                 "speaking"
             );
@@ -1697,6 +2103,7 @@ function updatePlayersList(
 
 
         if (player.muted) {
+
             item.classList.add(
                 "player-muted"
             );
@@ -1732,7 +2139,9 @@ function updatePlayersList(
             status.textContent =
                 "🔇 مكتوم";
 
-        } else if (player.speaking) {
+        } else if (
+            player.speaking
+        ) {
 
             status.textContent =
                 "🟢 يتحدث";
@@ -1744,19 +2153,28 @@ function updatePlayersList(
         }
 
 
-        item.appendChild(name);
-        item.appendChild(status);
+        item.appendChild(
+            name
+        );
 
-        container.appendChild(item);
+        item.appendChild(
+            status
+        );
+
+        container.appendChild(
+            item
+        );
     }
 }
 
 
 // =========================================================
-// PROXIMITY VOICE
+// PROXIMITY
 // =========================================================
 
-function applyProximityVolume(players) {
+function applyProximityVolume(
+    players
+) {
 
     if (!livekitRoom) return;
 
@@ -1764,8 +2182,12 @@ function applyProximityVolume(players) {
     const me =
         players.find(
             player =>
-                Number(player.user_id) ===
-                Number(currentUserId)
+                Number(
+                    player.user_id
+                ) ===
+                Number(
+                    currentUserId
+                )
         );
 
 
@@ -1777,8 +2199,12 @@ function applyProximityVolume(players) {
     ) {
 
         if (
-            Number(remotePlayer.user_id) ===
-            Number(currentUserId)
+            Number(
+                remotePlayer.user_id
+            ) ===
+            Number(
+                currentUserId
+            )
         ) {
             continue;
         }
@@ -1794,7 +2220,9 @@ function applyProximityVolume(players) {
                 );
 
 
-        if (!participant) continue;
+        if (!participant) {
+            continue;
+        }
 
 
         applyParticipantVolume(
@@ -1831,6 +2259,34 @@ function applyParticipantVolume(
 
     try {
 
+        const userId =
+            String(
+                participant.identity
+            );
+
+
+        const audioElements =
+            document.querySelectorAll(
+                "audio[data-user-id]"
+            );
+
+
+        audioElements.forEach(
+            audio => {
+
+                if (
+                    String(
+                        audio.dataset.userId
+                    ) === userId
+                ) {
+
+                    audio.volume =
+                        volume;
+                }
+            }
+        );
+
+
         participant
             .audioTrackPublications
             .forEach(
@@ -1839,38 +2295,20 @@ function applyParticipantVolume(
                     const track =
                         publication.track;
 
-
                     if (!track) return;
-
 
                     if (
                         typeof track.setVolume ===
                         "function"
                     ) {
 
-                        track.setVolume(
-                            volume
-                        );
+                        try {
 
-                    } else {
-
-                        const audioElements =
-                            document.querySelectorAll(
-                                `audio[data-user-id="${CSS.escape(
-                                    String(
-                                        participant.identity
-                                    )
-                                )}"]`
+                            track.setVolume(
+                                volume
                             );
 
-
-                        audioElements.forEach(
-                            audio => {
-
-                                audio.volume =
-                                    volume;
-                            }
-                        );
+                        } catch (_) {}
                     }
                 }
             );
@@ -1901,10 +2339,18 @@ function resetParticipantAudio(
 
     document
         .querySelectorAll(
-            `audio[data-user-id="${CSS.escape(userId)}"]`
+            "audio[data-user-id]"
         )
         .forEach(
             audio => {
+
+                if (
+                    String(
+                        audio.dataset.userId
+                    ) !== userId
+                ) {
+                    return;
+                }
 
                 try {
                     audio.pause();
@@ -1920,7 +2366,10 @@ function resetParticipantAudio(
 // DISTANCE
 // =========================================================
 
-function calculateDistance(a, b) {
+function calculateDistance(
+    a,
+    b
+) {
 
     const dx =
         Number(a.x || 0) -
@@ -1947,14 +2396,18 @@ function calculateDistance(a, b) {
 // VOLUME
 // =========================================================
 
-function calculateVolume(distance) {
+function calculateVolume(
+    distance
+) {
 
     const MAX_DISTANCE = 80;
 
 
     if (
-        distance >= MAX_DISTANCE
+        distance >=
+        MAX_DISTANCE
     ) {
+
         return 0;
     }
 
@@ -2076,7 +2529,9 @@ async function sendVoiceState(
                         !isMicrophoneMuted,
 
                     speaking:
-                        Boolean(speaking)
+                        Boolean(
+                            speaking
+                        )
                 })
             }
         );
@@ -2092,7 +2547,7 @@ async function sendVoiceState(
 
 
 // =========================================================
-// CODE INPUT
+// INPUT EVENTS
 // =========================================================
 
 if (verificationCode) {
@@ -2121,7 +2576,8 @@ if (verificationCode) {
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
 
                 verifyCode();
@@ -2131,10 +2587,6 @@ if (verificationCode) {
 }
 
 
-// =========================================================
-// USERNAME ENTER
-// =========================================================
-
 if (usernameInput) {
 
     usernameInput.addEventListener(
@@ -2142,7 +2594,8 @@ if (usernameInput) {
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
 
                 requestVerification();
@@ -2153,7 +2606,92 @@ if (usernameInput) {
 
 
 // =========================================================
-// CLOSE MODAL
+// BUTTON EVENTS
+// =========================================================
+
+if (verifyAccountBtn) {
+
+    verifyAccountBtn.addEventListener(
+        "click",
+        requestVerification
+    );
+}
+
+
+if (microphoneYesBtn) {
+
+    microphoneYesBtn.addEventListener(
+        "click",
+        acceptMicrophone
+    );
+}
+
+
+if (microphoneNoBtn) {
+
+    microphoneNoBtn.addEventListener(
+        "click",
+        declineMicrophone
+    );
+}
+
+
+if (verifyCodeBtn) {
+
+    verifyCodeBtn.addEventListener(
+        "click",
+        verifyCode
+    );
+}
+
+
+if (backToMicrophoneBtn) {
+
+    backToMicrophoneBtn.addEventListener(
+        "click",
+        backToMicrophone
+    );
+}
+
+
+if (micToggleBtn) {
+
+    micToggleBtn.addEventListener(
+        "click",
+        toggleMicrophone
+    );
+}
+
+
+if (leaveVoiceBtn) {
+
+    leaveVoiceBtn.addEventListener(
+        "click",
+        showLeaveConfirmation
+    );
+}
+
+
+if (confirmLeaveBtn) {
+
+    confirmLeaveBtn.addEventListener(
+        "click",
+        confirmLeaveVoice
+    );
+}
+
+
+if (cancelLeaveBtn) {
+
+    cancelLeaveBtn.addEventListener(
+        "click",
+        hideLeaveConfirmation
+    );
+}
+
+
+// =========================================================
+// MODAL
 // =========================================================
 
 const leaveModal =
@@ -2184,12 +2722,34 @@ if (leaveModal) {
 // INITIAL STATE
 // =========================================================
 
+hideElement(
+    microphoneStep
+);
+
+hideElement(
+    codeStep
+);
+
+hideElement(
+    voiceCard
+);
+
+hideElement(
+    adminCard
+);
+
+showElement(
+    usernameStep
+);
+
 updateMicrophoneButton();
 
 setVoiceStatus(
     "غير متصل بالصوت",
     false
 );
+
+updateCurrentStatus();
 
 
 // =========================================================
@@ -2208,6 +2768,9 @@ window.declineMicrophone =
 window.verifyCode =
     verifyCode;
 
+window.backToMicrophone =
+    backToMicrophone;
+
 window.toggleMicrophone =
     toggleMicrophone;
 
@@ -2222,3 +2785,12 @@ window.confirmLeaveVoice =
 
 window.leaveVoice =
     leaveVoice;
+
+
+// =========================================================
+// READY
+// =========================================================
+
+console.log(
+    "[CT Voice] voice.js loaded successfully."
+);
