@@ -20,7 +20,7 @@ from livekit import api
 # =========================================================
 
 APP_NAME = "CT Voice"
-VERSION = "2.0.0"
+VERSION = "2.0.1"
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -48,8 +48,6 @@ LIVEKIT_URL = os.getenv("LIVEKIT_URL", "")
 LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "")
 LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "")
 
-# Roblox UserId of the main owner.
-# Put it in Render Environment Variables.
 CT_OWNER_USER_ID = os.getenv("CT_OWNER_USER_ID", "")
 
 
@@ -99,10 +97,6 @@ def init_db():
 
     con = db()
 
-    # -----------------------------------------------------
-    # PLAYERS
-    # -----------------------------------------------------
-
     con.execute("""
         CREATE TABLE IF NOT EXISTS players (
             user_id INTEGER PRIMARY KEY,
@@ -113,10 +107,6 @@ def init_db():
             last_seen TEXT
         )
     """)
-
-    # -----------------------------------------------------
-    # VERIFICATION
-    # -----------------------------------------------------
 
     con.execute("""
         CREATE TABLE IF NOT EXISTS verification (
@@ -131,10 +121,6 @@ def init_db():
         )
     """)
 
-    # -----------------------------------------------------
-    # ADMIN ROLES
-    # -----------------------------------------------------
-
     con.execute("""
         CREATE TABLE IF NOT EXISTS admin_roles (
             user_id INTEGER PRIMARY KEY,
@@ -144,10 +130,6 @@ def init_db():
             created_at TEXT
         )
     """)
-
-    # -----------------------------------------------------
-    # MUTES
-    # -----------------------------------------------------
 
     con.execute("""
         CREATE TABLE IF NOT EXISTS mutes (
@@ -159,10 +141,6 @@ def init_db():
             created_at TEXT
         )
     """)
-
-    # -----------------------------------------------------
-    # VOICE STATE
-    # -----------------------------------------------------
 
     con.execute("""
         CREATE TABLE IF NOT EXISTS voice_state (
@@ -267,7 +245,7 @@ def generate_code():
 
 
 # =========================================================
-# ROBLOX
+# ROBLOX API
 # =========================================================
 
 def get_roblox_user(username: str):
@@ -416,11 +394,13 @@ def is_muted(user_id: int):
 
 def get_admin_role(user_id: int):
 
-    # Owner from Environment Variable
     if CT_OWNER_USER_ID:
+
         try:
+
             if int(CT_OWNER_USER_ID) == int(user_id):
                 return "OWNER"
+
         except Exception:
             pass
 
@@ -462,7 +442,6 @@ def can_manage(admin_user_id: int, target_user_id: int):
     if admin_level_value <= 0:
         return False
 
-    # لا يستطيع إدارة رتبة مساوية أو أعلى منه
     if target_level_value >= admin_level_value:
         return False
 
@@ -478,7 +457,6 @@ def can_assign_role(admin_user_id: int, role: str):
     if not target_level:
         return False
 
-    # OWNER فقط يستطيع إعطاء CO-OWNER
     if target_level >= ROLE_LEVELS["CO-OWNER"]:
         return level >= ROLE_LEVELS["OWNER"]
 
@@ -495,6 +473,36 @@ def health():
     return {
         "status": "CT Voice Server Online",
         "version": VERSION
+    }
+
+
+# =========================================================
+# DEBUG ROUTES
+# =========================================================
+
+@app.get("/debug/routes")
+def debug_routes():
+
+    routes = []
+
+    for route in app.routes:
+
+        methods = list(route.methods or [])
+
+        routes.append({
+            "path": route.path,
+            "methods": methods
+        })
+
+    return {
+        "success": True,
+        "version": VERSION,
+        "roblox_player_endpoint": any(
+            route["path"] == "/roblox/player"
+            and "POST" in route["methods"]
+            for route in routes
+        ),
+        "routes": routes
     }
 
 
@@ -540,7 +548,10 @@ def update_player(player: RobloxPlayer):
     con.close()
 
     return {
-        "success": True
+        "success": True,
+        "user_id": player.user_id,
+        "username": player.username,
+        "last_seen": current_time
     }
 
 
@@ -555,19 +566,16 @@ def player_leave(data: VoiceRequest):
 
     con = db()
 
-    # إزالة اللاعب من اللاعبين المتصلين
     con.execute(
         "DELETE FROM players WHERE user_id = ?",
         (user_id,)
     )
 
-    # التحقق ينتهي عند الخروج من اللعبة
     con.execute(
         "DELETE FROM verification WHERE user_id = ?",
         (user_id,)
     )
 
-    # الصوت ينقطع
     con.execute(
         "DELETE FROM voice_state WHERE user_id = ?",
         (user_id,)
@@ -592,6 +600,7 @@ def check_player(user_id: int):
     row = get_player(user_id)
 
     if not row:
+
         return {
             "online": False
         }
@@ -609,7 +618,7 @@ def check_player(user_id: int):
 
 
 # =========================================================
-# ROBLOX VERIFICATION CODE
+# ROBLOX VERIFICATION
 # =========================================================
 
 @app.get("/roblox/verification/{user_id}")
@@ -870,9 +879,7 @@ def auth_verify(data: AuthVerify):
             "message": "تم التحقق مسبقًا."
         }
 
-    expires_at = parse_time(
-        row["expires_at"]
-    )
+    expires_at = parse_time(row["expires_at"])
 
     if (
         not expires_at
@@ -999,7 +1006,6 @@ def auth_status(user_id: int):
 @app.post("/voice/state")
 def update_voice_state(data: VoiceStateRequest):
 
-    # إذا اللاعب خرج من الماب
     if not player_is_online(data.user_id):
 
         return {
@@ -1007,7 +1013,6 @@ def update_voice_state(data: VoiceStateRequest):
             "status": "not_in_game"
         }
 
-    # إذا عليه ميوت
     muted = is_muted(data.user_id)
 
     mic_enabled = (
@@ -1144,14 +1149,10 @@ def voice_players(user_id: int):
 
     for player in players:
 
-        if not player_is_online(
-            player["user_id"]
-        ):
+        if not player_is_online(player["user_id"]):
             continue
 
-        muted = is_muted(
-            player["user_id"]
-        )
+        muted = is_muted(player["user_id"])
 
         result.append({
             "user_id": player["user_id"],
@@ -1159,9 +1160,11 @@ def voice_players(user_id: int):
             "x": player["x"],
             "y": player["y"],
             "z": player["z"],
-            "connected": bool(
-                player["connected"]
-            ) if player["connected"] is not None else False,
+            "connected": (
+                bool(player["connected"])
+                if player["connected"] is not None
+                else False
+            ),
             "mic_enabled": (
                 bool(player["mic_enabled"])
                 and not muted
@@ -1244,18 +1247,13 @@ def admin_players(admin_user_id: int):
             p.y,
             p.z,
             p.last_seen,
-
             v.connected,
             v.mic_enabled,
             v.speaking,
-
             a.role AS admin_role
-
         FROM players p
-
         LEFT JOIN voice_state v
             ON v.user_id = p.user_id
-
         LEFT JOIN admin_roles a
             ON a.user_id = p.user_id
     """).fetchall()
@@ -1266,14 +1264,10 @@ def admin_players(admin_user_id: int):
 
     for player in players:
 
-        if not player_is_online(
-            player["user_id"]
-        ):
+        if not player_is_online(player["user_id"]):
             continue
 
-        mute = get_mute(
-            player["user_id"]
-        )
+        mute = get_mute(player["user_id"])
 
         result.append({
             "user_id": player["user_id"],
@@ -1281,15 +1275,21 @@ def admin_players(admin_user_id: int):
             "x": player["x"],
             "y": player["y"],
             "z": player["z"],
-            "connected": bool(
-                player["connected"]
-            ) if player["connected"] is not None else False,
-            "mic_enabled": bool(
-                player["mic_enabled"]
-            ) if player["mic_enabled"] is not None else False,
-            "speaking": bool(
-                player["speaking"]
-            ) if player["speaking"] is not None else False,
+            "connected": (
+                bool(player["connected"])
+                if player["connected"] is not None
+                else False
+            ),
+            "mic_enabled": (
+                bool(player["mic_enabled"])
+                if player["mic_enabled"] is not None
+                else False
+            ),
+            "speaking": (
+                bool(player["speaking"])
+                if player["speaking"] is not None
+                else False
+            ),
             "muted": mute is not None,
             "muted_until": (
                 mute["muted_until"]
@@ -1338,9 +1338,7 @@ def admin_mute(data: AdminMuteRequest):
             detail="Invalid mute duration"
         )
 
-    target = get_player(
-        data.target_user_id
-    )
+    target = get_player(data.target_user_id)
 
     username = (
         target["username"]
@@ -1384,7 +1382,6 @@ def admin_mute(data: AdminMuteRequest):
         iso(now())
     ))
 
-    # إيقاف المايك فورًا
     con.execute("""
         UPDATE voice_state
         SET mic_enabled = 0,
@@ -1463,17 +1460,6 @@ def give_admin_role(data: AdminRoleRequest):
             detail="You cannot assign this role"
         )
 
-    target = get_player(
-        data.target_user_id
-    )
-
-    username = (
-        target["username"]
-        if target
-        else str(data.target_user_id)
-    )
-
-    # لا يمكن تغيير مالك البيئة
     if (
         CT_OWNER_USER_ID
         and str(data.target_user_id)
@@ -1484,6 +1470,14 @@ def give_admin_role(data: AdminRoleRequest):
             status_code=403,
             detail="The main owner cannot be changed"
         )
+
+    target = get_player(data.target_user_id)
+
+    username = (
+        target["username"]
+        if target
+        else str(data.target_user_id)
+    )
 
     con = db()
 
@@ -1592,9 +1586,7 @@ def voice_token(data: VoiceRequest):
             detail="LIVEKIT_API_SECRET is not configured"
         )
 
-    row = get_verification(
-        data.user_id
-    )
+    row = get_verification(data.user_id)
 
     if not row or not row["verified"]:
 
@@ -1603,26 +1595,18 @@ def voice_token(data: VoiceRequest):
             detail="Player is not verified"
         )
 
-    if not player_is_online(
-        data.user_id
-    ):
+    if not player_is_online(data.user_id):
 
-        clear_verification(
-            data.user_id
-        )
+        clear_verification(data.user_id)
 
         raise HTTPException(
             status_code=403,
             detail="Player is not inside the game"
         )
 
-    muted = is_muted(
-        data.user_id
-    )
+    muted = is_muted(data.user_id)
 
-    identity = str(
-        data.user_id
-    )
+    identity = str(data.user_id)
 
     token = (
         api.AccessToken(
