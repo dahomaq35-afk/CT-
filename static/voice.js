@@ -1,5 +1,6 @@
 // =========================================================
 // CT VOICE - voice.js
+// Final Version
 // =========================================================
 
 let currentUsername = "";
@@ -117,9 +118,9 @@ function setButtonLoading(button, loading, text) {
 async function requestVerification() {
 
     const username =
-        usernameInput ?
-        usernameInput.value.trim() :
-        "";
+        usernameInput
+            ? usernameInput.value.trim()
+            : "";
 
     clearMessage(message);
 
@@ -215,8 +216,7 @@ async function requestVerification() {
             const minutes =
                 Math.ceil(
                     Number(
-                        data.remaining ||
-                        300
+                        data.remaining || 300
                     ) / 60
                 );
 
@@ -311,16 +311,16 @@ async function acceptMicrophone() {
     }
 
 
-    try {
+    /*
+     * يتم إنشاء رمز التحقق في السيرفر.
+     *
+     * الرمز لا يرجع للموقع.
+     *
+     * سكربت Roblox يقرأ الرمز
+     * ويعرضه للاعب داخل اللعبة.
+     */
 
-        /*
-         * يتم إنشاء رمز التحقق في السيرفر.
-         *
-         * الموقع لا يعرف الرمز.
-         *
-         * سكربت Roblox هو الذي يقرأ الرمز
-         * ويعرضه داخل اللعبة.
-         */
+    try {
 
         const response =
             await fetch(
@@ -345,7 +345,7 @@ async function acceptMicrophone() {
             await response.json();
 
 
-        if (!data.success) {
+        if (!response.ok || !data.success) {
 
             showMessage(
                 declineMessage,
@@ -453,15 +453,6 @@ async function declineMicrophone() {
     }
 
 
-    /*
-     * لا نعرض رسالة جديدة.
-     *
-     * يتم إخفاء واجهة التفعيل.
-     *
-     * السيرفر يمنع إعادة الطلب
-     * لمدة 5 دقائق.
-     */
-
     hideElement(
         microphoneCard
     );
@@ -478,11 +469,11 @@ async function declineMicrophone() {
 async function verifyCode() {
 
     const code =
-        verificationCode ?
-        verificationCode.value
-            .trim()
-            .toUpperCase() :
-        "";
+        verificationCode
+            ? verificationCode.value
+                .trim()
+                .toUpperCase()
+            : "";
 
 
     clearMessage(
@@ -755,6 +746,7 @@ async function connectToVoice() {
 
             showMessage(
                 voiceMessage,
+                data.message ||
                 "تعذر إنشاء اتصال الصوت."
             );
 
@@ -767,7 +759,10 @@ async function connectToVoice() {
         // =================================================
 
         livekitRoom =
-            new LivekitClient.Room();
+            new LivekitClient.Room({
+                adaptiveStream: true,
+                dynacast: true
+            });
 
 
         // =================================================
@@ -801,6 +796,21 @@ async function connectToVoice() {
                 handleActiveSpeakers(
                     speakers
                 );
+
+                const myIdentity =
+                    String(currentUserId);
+
+                const amISpeaking =
+                    speakers.some(
+                        speaker =>
+                            String(
+                                speaker.identity
+                            ) === myIdentity
+                    );
+
+                sendVoiceState(
+                    amISpeaking
+                );
             }
         );
 
@@ -831,6 +841,110 @@ async function connectToVoice() {
 
                 console.log(
                     "[CT Voice] Player left:",
+                    participant.identity
+                );
+
+                resetParticipantAudio(
+                    participant
+                );
+            }
+        );
+
+
+        // =================================================
+        // TRACK SUBSCRIBED
+        // =================================================
+        // هذا الجزء مهم جدًا:
+        // يستقبل صوت اللاعب الآخر ويشغله في المتصفح.
+        // =================================================
+
+        livekitRoom.on(
+            LivekitClient.RoomEvent.TrackSubscribed,
+            (
+                track,
+                publication,
+                participant
+            ) => {
+
+                if (
+                    track.kind !==
+                    LivekitClient.Track.Kind.Audio
+                ) {
+                    return;
+                }
+
+
+                try {
+
+                    const element =
+                        track.attach();
+
+
+                    element.dataset.userId =
+                        String(
+                            participant.identity
+                        );
+
+
+                    element.autoplay = true;
+
+                    element.setAttribute(
+                        "playsinline",
+                        ""
+                    );
+
+
+                    element.style.display =
+                        "none";
+
+
+                    document.body.appendChild(
+                        element
+                    );
+
+
+                    console.log(
+                        "[CT Voice] Audio connected:",
+                        participant.identity
+                    );
+
+
+                    // تطبيق مستوى الصوت الحالي
+                    applySingleParticipantVolume(
+                        participant
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "[CT Voice] Audio Attach Error:",
+                        error
+                    );
+                }
+            }
+        );
+
+
+        // =================================================
+        // TRACK UNSUBSCRIBED
+        // =================================================
+
+        livekitRoom.on(
+            LivekitClient.RoomEvent.TrackUnsubscribed,
+            (
+                track,
+                publication,
+                participant
+            ) => {
+
+                try {
+
+                    track.detach();
+
+                } catch (_) {}
+
+                console.log(
+                    "[CT Voice] Audio disconnected:",
                     participant.identity
                 );
             }
@@ -897,6 +1011,30 @@ async function enableMicrophone() {
 
         isMicrophoneMuted = false;
 
+
+        const publications =
+            livekitRoom
+                .localParticipant
+                .audioTrackPublications;
+
+
+        if (publications) {
+
+            publications.forEach(
+                publication => {
+
+                    if (
+                        publication.track
+                    ) {
+
+                        localAudioTrack =
+                            publication.track;
+                    }
+                }
+            );
+        }
+
+
         updateMicrophoneButton();
 
         sendVoiceState();
@@ -927,19 +1065,19 @@ async function toggleMicrophone() {
 
     try {
 
-        const enabled =
+        const shouldMute =
             !isMicrophoneMuted;
 
 
         await livekitRoom
             .localParticipant
             .setMicrophoneEnabled(
-                !enabled
+                !shouldMute
             );
 
 
         isMicrophoneMuted =
-            enabled;
+            shouldMute;
 
 
         updateMicrophoneButton();
@@ -994,7 +1132,8 @@ function updateMicrophoneButton() {
 
     if (isMicrophoneMuted) {
 
-        micIcon.textContent = "🔇";
+        micIcon.textContent =
+            "🔇";
 
         micText.textContent =
             "فتح المايك";
@@ -1005,7 +1144,8 @@ function updateMicrophoneButton() {
 
     } else {
 
-        micIcon.textContent = "🎙️";
+        micIcon.textContent =
+            "🎙️";
 
         micText.textContent =
             "كتم المايك";
@@ -1119,7 +1259,6 @@ async function confirmLeaveVoice() {
 async function leaveVoice() {
 
     stopVerificationStatus();
-
     stopPlayersRefresh();
 
 
@@ -1178,6 +1317,26 @@ async function leaveVoice() {
             error
         );
     }
+
+
+    // =====================================================
+    // REMOVE AUDIO ELEMENTS
+    // =====================================================
+
+    document
+        .querySelectorAll(
+            "audio[data-user-id]"
+        )
+        .forEach(
+            element => {
+
+                try {
+                    element.pause();
+                } catch (_) {}
+
+                element.remove();
+            }
+        );
 
 
     localAudioTrack = null;
@@ -1465,6 +1624,11 @@ function updatePlayersList(
             "voice-player";
 
 
+        // مهم جدًا للـ ActiveSpeakersChanged
+        item.dataset.userId =
+            String(player.user_id);
+
+
         if (player.speaking) {
 
             item.classList.add(
@@ -1525,11 +1689,17 @@ function updatePlayersList(
         }
 
 
-        item.appendChild(name);
+        item.appendChild(
+            name
+        );
 
-        item.appendChild(status);
+        item.appendChild(
+            status
+        );
 
-        container.appendChild(item);
+        container.appendChild(
+            item
+        );
     }
 }
 
@@ -1592,46 +1762,148 @@ function applyProximityVolume(
         }
 
 
-        const distance =
-            calculateDistance(
-                me,
-                remotePlayer
-            );
-
-
-        const volume =
-            calculateVolume(
-                distance
-            );
-
-
-        try {
-
-            participant.audioTrackPublications
-                .forEach(
-                    publication => {
-
-                        if (
-                            publication.track
-                        ) {
-
-                            publication
-                                .track
-                                .setVolume(
-                                    volume
-                                );
-                        }
-                    }
-                );
-
-        } catch (error) {
-
-            console.error(
-                "[CT Voice] Volume Error:",
-                error
-            );
-        }
+        applyParticipantVolume(
+            participant,
+            me,
+            remotePlayer
+        );
     }
+}
+
+
+// =========================================================
+// SINGLE PARTICIPANT VOLUME
+// =========================================================
+
+function applySingleParticipantVolume(
+    participant
+) {
+
+    if (!livekitRoom) return;
+
+
+    if (!currentUserId) return;
+
+
+    // نستخدم آخر بيانات اللاعبين الموجودة
+    // عبر استدعاء updatePlayers في الدورة القادمة.
+    //
+    // لا نرفع الصوت تلقائيًا هنا،
+    // حتى لا نعطي صوتًا كاملًا قبل معرفة المسافة.
+}
+
+
+// =========================================================
+// PARTICIPANT VOLUME
+// =========================================================
+
+function applyParticipantVolume(
+    participant,
+    me,
+    remotePlayer
+) {
+
+    const distance =
+        calculateDistance(
+            me,
+            remotePlayer
+        );
+
+
+    const volume =
+        calculateVolume(
+            distance
+        );
+
+
+    try {
+
+        participant
+            .audioTrackPublications
+            .forEach(
+                publication => {
+
+                    const track =
+                        publication.track;
+
+
+                    if (!track) {
+                        return;
+                    }
+
+
+                    // LiveKit AudioTrack
+                    if (
+                        typeof track.setVolume ===
+                        "function"
+                    ) {
+
+                        track.setVolume(
+                            volume
+                        );
+
+                    } else {
+
+                        // احتياط للـ HTML Audio Element
+                        const audioElements =
+                            document.querySelectorAll(
+                                `audio[data-user-id="${CSS.escape(
+                                    String(
+                                        participant.identity
+                                    )
+                                )}"]`
+                            );
+
+
+                        audioElements.forEach(
+                            audio => {
+
+                                audio.volume =
+                                    volume;
+                            }
+                        );
+                    }
+                }
+            );
+
+    } catch (error) {
+
+        console.error(
+            "[CT Voice] Volume Error:",
+            error
+        );
+    }
+}
+
+
+// =========================================================
+// RESET PARTICIPANT AUDIO
+// =========================================================
+
+function resetParticipantAudio(
+    participant
+) {
+
+    const userId =
+        String(
+            participant.identity
+        );
+
+
+    document
+        .querySelectorAll(
+            `audio[data-user-id="${CSS.escape(userId)}"]`
+        )
+        .forEach(
+            audio => {
+
+                try {
+                    audio.pause();
+                } catch (_) {}
+
+                audio.remove();
+            }
+        );
 }
 
 
@@ -1674,6 +1946,7 @@ function calculateVolume(
 ) {
 
     const MAX_DISTANCE = 80;
+
 
     if (
         distance >=
@@ -1738,27 +2011,16 @@ function handleActiveSpeakers(
     items.forEach(
         item => {
 
-            const name =
-                item.querySelector(
-                    ".voice-player-name"
-                );
-
-
-            if (!name) return;
-
-
-            /*
-             * الاسم الظاهر مجرد اسم،
-             * لذلك نستخدم data-user-id
-             * إذا كان موجودًا.
-             */
-
             const userId =
                 item.dataset.userId;
 
 
+            if (!userId) {
+                return;
+            }
+
+
             if (
-                userId &&
                 activeIds.has(
                     String(userId)
                 )
@@ -1926,7 +2188,40 @@ if (leaveModal) {
 // =========================================================
 
 updateMicrophoneButton();
+
 setVoiceStatus(
     "غير متصل بالصوت",
     false
 );
+
+
+// =========================================================
+// EXPOSE FUNCTIONS FOR HTML BUTTONS
+// =========================================================
+
+window.requestVerification =
+    requestVerification;
+
+window.acceptMicrophone =
+    acceptMicrophone;
+
+window.declineMicrophone =
+    declineMicrophone;
+
+window.verifyCode =
+    verifyCode;
+
+window.toggleMicrophone =
+    toggleMicrophone;
+
+window.showLeaveConfirmation =
+    showLeaveConfirmation;
+
+window.hideLeaveConfirmation =
+    hideLeaveConfirmation;
+
+window.confirmLeaveVoice =
+    confirmLeaveVoice;
+
+window.leaveVoice =
+    leaveVoice;
