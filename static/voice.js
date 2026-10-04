@@ -11,6 +11,7 @@ let livekitRoom = null;
 let localAudioTrack = null;
 
 let isMicrophoneMuted = false;
+
 let statusTimer = null;
 let playersTimer = null;
 let codeTimerInterval = null;
@@ -84,7 +85,11 @@ function clearMessage() {
 }
 
 
-function setButtonLoading(button, loading, loadingText = "جارٍ التحقق...") {
+function setButtonLoading(
+    button,
+    loading,
+    loadingText = "جارٍ التحقق..."
+) {
     if (!button) return;
 
     if (loading) {
@@ -108,8 +113,11 @@ function setButtonLoading(button, loading, loadingText = "جارٍ التحقق.
 // FETCH WITH TIMEOUT
 // =========================================================
 
-async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
-
+async function fetchWithTimeout(
+    url,
+    options = {},
+    timeoutMs = 15000
+) {
     const controller = new AbortController();
 
     const timeout = setTimeout(() => {
@@ -119,11 +127,58 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 15000) {
     try {
         return await fetch(url, {
             ...options,
-            signal: controller.signal
+            signal: controller.signal,
+            cache: "no-store"
         });
     } finally {
         clearTimeout(timeout);
     }
+}
+
+
+// =========================================================
+// LIVEKIT CONNECTION TIMEOUT
+// =========================================================
+
+function connectLiveKitWithTimeout(
+    room,
+    url,
+    token,
+    timeoutMs = 20000
+) {
+    return new Promise((resolve, reject) => {
+        let finished = false;
+
+        const timer = setTimeout(() => {
+            if (finished) return;
+
+            finished = true;
+
+            reject(
+                new Error(
+                    "LIVEKIT_CONNECTION_TIMEOUT"
+                )
+            );
+        }, timeoutMs);
+
+        room.connect(url, token)
+            .then(() => {
+                if (finished) return;
+
+                finished = true;
+                clearTimeout(timer);
+
+                resolve();
+            })
+            .catch(error => {
+                if (finished) return;
+
+                finished = true;
+                clearTimeout(timer);
+
+                reject(error);
+            });
+    });
 }
 
 
@@ -139,12 +194,14 @@ async function readResponse(response) {
         return {
             success: false,
             status: "empty_response",
-            message: `السيرفر لم يرجع أي بيانات. HTTP ${response.status}`
+            message:
+                `السيرفر لم يرجع أي بيانات. HTTP ${response.status}`
         };
     }
 
     try {
         return JSON.parse(raw);
+
     } catch (error) {
 
         console.error(
@@ -155,7 +212,8 @@ async function readResponse(response) {
         return {
             success: false,
             status: "invalid_response",
-            message: `السيرفر أرسل استجابة غير صالحة. HTTP ${response.status}`
+            message:
+                `السيرفر أرسل استجابة غير صالحة. HTTP ${response.status}`
         };
     }
 }
@@ -174,7 +232,9 @@ async function requestVerification() {
     clearMessage();
 
     if (!username) {
-        showMessage("❌ اكتب اسم حساب Roblox أولاً.");
+        showMessage(
+            "❌ اكتب اسم حساب Roblox أولاً."
+        );
         return;
     }
 
@@ -200,7 +260,8 @@ async function requestVerification() {
             15000
         );
 
-        const data = await readResponse(response);
+        const data =
+            await readResponse(response);
 
         console.log(
             "[CT Voice] Auth Response:",
@@ -214,7 +275,10 @@ async function requestVerification() {
         );
 
 
-        if (data.status === "account_not_found") {
+        if (
+            data.status ===
+            "account_not_found"
+        ) {
 
             showMessage(
                 "❌ " +
@@ -228,7 +292,10 @@ async function requestVerification() {
         }
 
 
-        if (data.status === "not_in_game") {
+        if (
+            data.status ===
+            "not_in_game"
+        ) {
 
             showMessage(
                 "⚠️ " +
@@ -242,16 +309,23 @@ async function requestVerification() {
         }
 
 
-        if (data.status === "declined_cooldown") {
+        if (
+            data.status ===
+            "declined_cooldown"
+        ) {
 
-            const seconds = Number(
-                data.remaining || 300
-            );
+            const seconds =
+                Number(
+                    data.remaining || 300
+                );
 
-            const minutes = Math.max(
-                1,
-                Math.ceil(seconds / 60)
-            );
+            const minutes =
+                Math.max(
+                    1,
+                    Math.ceil(
+                        seconds / 60
+                    )
+                );
 
             showMessage(
                 `⏳ رفضت تفعيل المايك. حاول بعد ${minutes} دقيقة.`
@@ -261,7 +335,10 @@ async function requestVerification() {
         }
 
 
-        if (data.status === "invalid_username") {
+        if (
+            data.status ===
+            "invalid_username"
+        ) {
 
             showMessage(
                 "❌ " +
@@ -293,6 +370,7 @@ async function requestVerification() {
                 );
 
             if (foundUsername) {
+
                 foundUsername.textContent =
                     `تم العثور على حساب: ${currentUsername}`;
             }
@@ -300,6 +378,7 @@ async function requestVerification() {
 
             hideElement(usernameStep);
             hideElement(codeStep);
+
             showElement(microphoneStep);
 
             clearMessage();
@@ -387,7 +466,8 @@ async function acceptMicrophone() {
             15000
         );
 
-        const data = await readResponse(response);
+        const data =
+            await readResponse(response);
 
         console.log(
             "[CT Voice] Code Request:",
@@ -407,7 +487,8 @@ async function acceptMicrophone() {
         ) {
 
             if (
-                data.status === "not_in_game"
+                data.status ===
+                "not_in_game"
             ) {
 
                 showMessage(
@@ -448,12 +529,14 @@ async function acceptMicrophone() {
             );
 
         if (codeUsername) {
+
             codeUsername.textContent =
                 currentUsername;
         }
 
 
         hideElement(microphoneStep);
+
         showElement(codeStep);
 
 
@@ -462,7 +545,9 @@ async function acceptMicrophone() {
             verificationCode.value = "";
 
             setTimeout(() => {
-                verificationCode.focus();
+                try {
+                    verificationCode.focus();
+                } catch (_) {}
             }, 100);
         }
 
@@ -561,6 +646,7 @@ async function declineMicrophone() {
 
     hideElement(microphoneStep);
     hideElement(codeStep);
+
     showElement(usernameStep);
 
     clearMessage();
@@ -577,24 +663,31 @@ function startCodeTimer() {
 
     let remaining = 600;
 
-    updateCodeTimer(remaining);
+    updateCodeTimer(
+        remaining
+    );
 
-    codeTimerInterval = setInterval(() => {
+    codeTimerInterval =
+        setInterval(() => {
 
-        remaining--;
+            remaining--;
 
-        updateCodeTimer(remaining);
-
-        if (remaining <= 0) {
-
-            stopCodeTimer();
-
-            showMessage(
-                "⏳ انتهت صلاحية رمز التحقق. اضغط العودة ثم أعد المحاولة."
+            updateCodeTimer(
+                remaining
             );
-        }
 
-    }, 1000);
+            if (
+                remaining <= 0
+            ) {
+
+                stopCodeTimer();
+
+                showMessage(
+                    "⏳ انتهت صلاحية رمز التحقق. اضغط العودة ثم أعد المحاولة."
+                );
+            }
+
+        }, 1000);
 }
 
 
@@ -602,7 +695,9 @@ function stopCodeTimer() {
 
     if (codeTimerInterval) {
 
-        clearInterval(codeTimerInterval);
+        clearInterval(
+            codeTimerInterval
+        );
 
         codeTimerInterval = null;
     }
@@ -612,15 +707,22 @@ function stopCodeTimer() {
 function updateCodeTimer(seconds) {
 
     const timer =
-        document.getElementById("codeTimer");
+        document.getElementById(
+            "codeTimer"
+        );
 
     if (!timer) return;
 
     const safeSeconds =
-        Math.max(0, Number(seconds));
+        Math.max(
+            0,
+            Number(seconds)
+        );
 
     const minutes =
-        Math.floor(safeSeconds / 60);
+        Math.floor(
+            safeSeconds / 60
+        );
 
     const secs =
         safeSeconds % 60;
@@ -655,11 +757,12 @@ function backToMicrophone() {
 
 async function verifyCode() {
 
-    const code = verificationCode
-        ? verificationCode.value
-            .trim()
-            .toUpperCase()
-        : "";
+    const code =
+        verificationCode
+            ? verificationCode.value
+                .trim()
+                .toUpperCase()
+            : "";
 
     clearMessage();
 
@@ -694,23 +797,30 @@ async function verifyCode() {
 
     try {
 
-        const response = await fetchWithTimeout(
-            "/auth/verify",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
+        const response =
+            await fetchWithTimeout(
+                "/auth/verify",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        username:
+                            currentUsername,
+                        code:
+                            code
+                    })
                 },
-                body: JSON.stringify({
-                    username: currentUsername,
-                    code: code
-                })
-            },
-            15000
-        );
+                15000
+            );
+
 
         const data =
-            await readResponse(response);
+            await readResponse(
+                response
+            );
+
 
         console.log(
             "[CT Voice] Verify Response:",
@@ -718,13 +828,17 @@ async function verifyCode() {
             data
         );
 
+
         setButtonLoading(
             verifyCodeBtn,
             false
         );
 
 
-        if (data.status === "wrong_code") {
+        if (
+            data.status ===
+            "wrong_code"
+        ) {
 
             const remaining =
                 data.remaining_attempts;
@@ -734,7 +848,8 @@ async function verifyCode() {
                 "رمز التحقق غير صحيح.";
 
             if (
-                remaining !== undefined
+                remaining !==
+                undefined
             ) {
 
                 text +=
@@ -753,7 +868,10 @@ async function verifyCode() {
         }
 
 
-        if (data.status === "expired") {
+        if (
+            data.status ===
+            "expired"
+        ) {
 
             showMessage(
                 "⏳ " +
@@ -767,7 +885,10 @@ async function verifyCode() {
         }
 
 
-        if (data.status === "too_many_attempts") {
+        if (
+            data.status ===
+            "too_many_attempts"
+        ) {
 
             showMessage(
                 "❌ " +
@@ -781,7 +902,10 @@ async function verifyCode() {
         }
 
 
-        if (data.status === "not_in_game") {
+        if (
+            data.status ===
+            "not_in_game"
+        ) {
 
             showMessage(
                 "⚠️ " +
@@ -810,7 +934,9 @@ async function verifyCode() {
 
             stopCodeTimer();
 
+
             hideElement(authCard);
+
             showElement(voiceCard);
 
 
@@ -820,6 +946,7 @@ async function verifyCode() {
                 );
 
             if (voiceUsername) {
+
                 voiceUsername.textContent =
                     currentUsername;
             }
@@ -831,6 +958,7 @@ async function verifyCode() {
                 );
 
             if (currentPlayerName) {
+
                 currentPlayerName.textContent =
                     currentUsername;
             }
@@ -842,6 +970,7 @@ async function verifyCode() {
                 );
 
             if (userAvatar) {
+
                 userAvatar.textContent =
                     currentUsername
                         .charAt(0)
@@ -850,6 +979,7 @@ async function verifyCode() {
 
 
             await connectToVoice();
+
 
             startVerificationStatus();
             startPlayersRefresh();
@@ -905,17 +1035,24 @@ async function verifyCode() {
 async function connectToVoice() {
 
     if (connectingToVoice) {
+
         console.log(
             "[CT Voice] Connection already in progress."
         );
+
         return;
     }
 
 
-    if (connectedToVoice && livekitRoom) {
+    if (
+        connectedToVoice &&
+        livekitRoom
+    ) {
+
         console.log(
             "[CT Voice] Already connected."
         );
+
         return;
     }
 
@@ -961,23 +1098,31 @@ async function connectToVoice() {
         );
 
 
-        const response = await fetchWithTimeout(
-            "/voice/token",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
+        // =================================================
+        // GET TOKEN
+        // =================================================
+
+        const response =
+            await fetchWithTimeout(
+                "/voice/token",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        user_id:
+                            currentUserId
+                    })
                 },
-                body: JSON.stringify({
-                    user_id: currentUserId
-                })
-            },
-            15000
-        );
+                15000
+            );
 
 
         const data =
-            await readResponse(response);
+            await readResponse(
+                response
+            );
 
 
         console.log(
@@ -1001,11 +1146,21 @@ async function connectToVoice() {
                 )
             );
 
+            setVoiceStatus(
+                "تعذر الاتصال بالصوت",
+                false
+            );
+
+            updateCurrentStatus();
+
             return;
         }
 
 
-        if (!data.url || !data.token) {
+        if (
+            !data.url ||
+            !data.token
+        ) {
 
             console.error(
                 "[CT Voice] Missing LiveKit URL or token:",
@@ -1016,6 +1171,13 @@ async function connectToVoice() {
                 "❌ السيرفر لم يرجع بيانات اتصال الصوت."
             );
 
+            setVoiceStatus(
+                "تعذر الاتصال بالصوت",
+                false
+            );
+
+            updateCurrentStatus();
+
             return;
         }
 
@@ -1025,6 +1187,10 @@ async function connectToVoice() {
             data.url
         );
 
+
+        // =================================================
+        // CREATE ROOM
+        // =================================================
 
         livekitRoom =
             new LivekitClient.Room({
@@ -1039,13 +1205,15 @@ async function connectToVoice() {
 
         livekitRoom.on(
             LivekitClient.RoomEvent.Disconnected,
-            () => {
+            reason => {
 
                 console.log(
-                    "[CT Voice] LiveKit disconnected."
+                    "[CT Voice] LiveKit disconnected:",
+                    reason
                 );
 
                 localAudioTrack = null;
+
                 connectedToVoice = false;
 
                 setVoiceStatus(
@@ -1070,8 +1238,12 @@ async function connectToVoice() {
                     speakers
                 );
 
+
                 const myIdentity =
-                    String(currentUserId);
+                    String(
+                        currentUserId
+                    );
+
 
                 const amISpeaking =
                     speakers.some(
@@ -1081,9 +1253,11 @@ async function connectToVoice() {
                             ) === myIdentity
                     );
 
+
                 updateLocalSpeaking(
                     amISpeaking
                 );
+
 
                 sendVoiceState(
                     amISpeaking
@@ -1129,7 +1303,7 @@ async function connectToVoice() {
 
 
         // =================================================
-        // AUDIO TRACK
+        // AUDIO TRACK SUBSCRIBED
         // =================================================
 
         livekitRoom.on(
@@ -1153,10 +1327,12 @@ async function connectToVoice() {
                     const element =
                         track.attach();
 
+
                     element.dataset.userId =
                         String(
                             participant.identity
                         );
+
 
                     element.autoplay = true;
 
@@ -1165,10 +1341,13 @@ async function connectToVoice() {
                         ""
                     );
 
+
                     element.style.display =
                         "none";
 
+
                     element.volume = 1;
+
 
                     document.body.appendChild(
                         element
@@ -1217,7 +1396,7 @@ async function connectToVoice() {
 
 
         // =================================================
-        // CONNECT
+        // CONNECT LIVEKIT
         // =================================================
 
         console.log(
@@ -1225,11 +1404,17 @@ async function connectToVoice() {
         );
 
 
-        await livekitRoom.connect(
+        await connectLiveKitWithTimeout(
+            livekitRoom,
             data.url,
-            data.token
+            data.token,
+            20000
         );
 
+
+        // =================================================
+        // CONNECTED
+        // =================================================
 
         connectedToVoice = true;
 
@@ -1239,12 +1424,9 @@ async function connectToVoice() {
         );
 
 
-        // =================================================
-        // MICROPHONE
-        // =================================================
-
-        await enableMicrophone();
-
+        // مهم:
+        // نعلن الاتصال بالصوت مباشرة.
+        // لا ننتظر صلاحية المايك حتى لا يعلق النظام.
 
         setVoiceStatus(
             "متصل بالصوت",
@@ -1254,8 +1436,15 @@ async function connectToVoice() {
         updateCurrentStatus();
 
 
+        // =================================================
+        // MICROPHONE
+        // =================================================
+
+        enableMicrophone();
+
+
         console.log(
-            "[CT Voice] Connected successfully."
+            "[CT Voice] Voice connection completed."
         );
 
     } catch (error) {
@@ -1265,13 +1454,16 @@ async function connectToVoice() {
             error
         );
 
+
         connectedToVoice = false;
 
 
         if (livekitRoom) {
 
             try {
+
                 await livekitRoom.disconnect();
+
             } catch (_) {}
 
             livekitRoom = null;
@@ -1292,7 +1484,17 @@ async function connectToVoice() {
 
         if (
             error &&
-            error.name === "AbortError"
+            error.message ===
+            "LIVEKIT_CONNECTION_TIMEOUT"
+        ) {
+
+            message =
+                "⏱️ انتهت مهلة الاتصال بخدمة الصوت. تأكد من LiveKit ثم حاول مرة أخرى.";
+
+        } else if (
+            error &&
+            error.name ===
+            "AbortError"
         ) {
 
             message =
@@ -1310,7 +1512,9 @@ async function connectToVoice() {
         }
 
 
-        showMessage(message);
+        showMessage(
+            message
+        );
 
     } finally {
 
@@ -1325,7 +1529,10 @@ async function connectToVoice() {
 
 async function enableMicrophone() {
 
-    if (!livekitRoom) return;
+    if (!livekitRoom) {
+        return;
+    }
+
 
     try {
 
@@ -1347,7 +1554,9 @@ async function enableMicrophone() {
             publications.forEach(
                 publication => {
 
-                    if (publication.track) {
+                    if (
+                        publication.track
+                    ) {
 
                         localAudioTrack =
                             publication.track;
@@ -1359,7 +1568,14 @@ async function enableMicrophone() {
 
         updateMicrophoneButton();
 
+        updateCurrentStatus();
+
         sendVoiceState();
+
+
+        console.log(
+            "[CT Voice] Microphone enabled."
+        );
 
     } catch (error) {
 
@@ -1368,8 +1584,16 @@ async function enableMicrophone() {
             error
         );
 
+
+        isMicrophoneMuted = true;
+
+
+        updateMicrophoneButton();
+        updateCurrentStatus();
+
+
         showMessage(
-            "⚠️ تعذر تشغيل المايك. تأكد من السماح للموقع باستخدام الميكروفون."
+            "⚠️ الصوت متصل، لكن تعذر تشغيل المايك. تأكد من السماح للموقع باستخدام الميكروفون."
         );
     }
 }
@@ -1382,6 +1606,16 @@ async function enableMicrophone() {
 async function toggleMicrophone() {
 
     if (!livekitRoom) {
+
+        showMessage(
+            "❌ أنت غير متصل بالصوت."
+        );
+
+        return;
+    }
+
+
+    if (!connectedToVoice) {
 
         showMessage(
             "❌ أنت غير متصل بالصوت."
@@ -1410,6 +1644,8 @@ async function toggleMicrophone() {
 
         updateMicrophoneButton();
 
+        updateCurrentStatus();
+
         sendVoiceState();
 
     } catch (error) {
@@ -1418,6 +1654,7 @@ async function toggleMicrophone() {
             "[CT Voice] Toggle Mic Error:",
             error
         );
+
 
         showMessage(
             "❌ تعذر تغيير حالة المايك."
@@ -1442,6 +1679,7 @@ function updateMicrophoneButton() {
             "micIcon"
         );
 
+
     const micText =
         document.getElementById(
             "micText"
@@ -1454,11 +1692,16 @@ function updateMicrophoneButton() {
             micIcon.textContent = "🔇";
         }
 
+
         if (micText) {
-            micText.textContent = "فتح المايك";
+            micText.textContent =
+                "فتح المايك";
         }
 
-        micToggleBtn.classList.add("muted");
+
+        micToggleBtn.classList.add(
+            "muted"
+        );
 
     } else {
 
@@ -1466,11 +1709,16 @@ function updateMicrophoneButton() {
             micIcon.textContent = "🎙️";
         }
 
+
         if (micText) {
-            micText.textContent = "كتم المايك";
+            micText.textContent =
+                "كتم المايك";
         }
 
-        micToggleBtn.classList.remove("muted");
+
+        micToggleBtn.classList.remove(
+            "muted"
+        );
     }
 }
 
@@ -1479,12 +1727,16 @@ function updateMicrophoneButton() {
 // VOICE STATUS
 // =========================================================
 
-function setVoiceStatus(text, connected) {
+function setVoiceStatus(
+    text,
+    connected
+) {
 
     const status =
         document.getElementById(
             "voiceStatus"
         );
+
 
     const dot =
         document.getElementById(
@@ -1501,15 +1753,23 @@ function setVoiceStatus(text, connected) {
 
         if (connected) {
 
-            dot.classList.add("connected");
+            dot.classList.add(
+                "connected"
+            );
 
         } else {
 
-            dot.classList.remove("connected");
+            dot.classList.remove(
+                "connected"
+            );
         }
     }
 }
 
+
+// =========================================================
+// CURRENT PLAYER STATUS
+// =========================================================
 
 function updateCurrentStatus() {
 
@@ -1517,6 +1777,7 @@ function updateCurrentStatus() {
         document.getElementById(
             "currentPlayerStatus"
         );
+
 
     if (!status) return;
 
@@ -1526,7 +1787,9 @@ function updateCurrentStatus() {
         status.textContent =
             "غير متصل بالصوت";
 
-    } else if (isMicrophoneMuted) {
+    } else if (
+        isMicrophoneMuted
+    ) {
 
         status.textContent =
             "المايك مكتوم";
@@ -1539,23 +1802,34 @@ function updateCurrentStatus() {
 }
 
 
-function updateLocalSpeaking(speaking) {
+// =========================================================
+// LOCAL SPEAKING
+// =========================================================
+
+function updateLocalSpeaking(
+    speaking
+) {
 
     const indicator =
         document.getElementById(
             "localSpeakingIndicator"
         );
 
+
     if (!indicator) return;
 
 
     if (speaking) {
 
-        indicator.classList.add("active");
+        indicator.classList.add(
+            "active"
+        );
 
     } else {
 
-        indicator.classList.remove("active");
+        indicator.classList.remove(
+            "active"
+        );
     }
 }
 
@@ -1571,8 +1845,11 @@ function showLeaveConfirmation() {
             "leaveModal"
         );
 
+
     if (modal) {
-        modal.classList.remove("hidden");
+        modal.classList.remove(
+            "hidden"
+        );
     }
 }
 
@@ -1584,8 +1861,11 @@ function hideLeaveConfirmation() {
             "leaveModal"
         );
 
+
     if (modal) {
-        modal.classList.add("hidden");
+        modal.classList.add(
+            "hidden"
+        );
     }
 }
 
@@ -1622,10 +1902,12 @@ async function leaveVoice() {
                 {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json"
+                        "Content-Type":
+                            "application/json"
                     },
                     body: JSON.stringify({
-                        user_id: currentUserId
+                        user_id:
+                            currentUserId
                     })
                 },
                 10000
@@ -1656,6 +1938,8 @@ async function leaveVoice() {
             "[CT Voice] Disconnect Error:",
             error
         );
+
+        livekitRoom = null;
     }
 
 
@@ -1676,9 +1960,12 @@ async function leaveVoice() {
 
 
     localAudioTrack = null;
+
     connectedToVoice = false;
     connectingToVoice = false;
+
     isMicrophoneMuted = false;
+
 
     currentUsername = "";
     currentUserId = null;
@@ -1710,6 +1997,7 @@ async function leaveVoice() {
         false
     );
 
+
     updateMicrophoneButton();
     updateCurrentStatus();
 }
@@ -1721,7 +2009,9 @@ async function leaveVoice() {
 
 async function checkVerificationStatus() {
 
-    if (!currentUserId) return;
+    if (!currentUserId) {
+        return;
+    }
 
 
     try {
@@ -1734,8 +2024,15 @@ async function checkVerificationStatus() {
             );
 
 
+        if (!response.ok) {
+            return;
+        }
+
+
         const data =
-            await readResponse(response);
+            await readResponse(
+                response
+            );
 
 
         if (!data.verified) {
@@ -1768,6 +2065,14 @@ async function checkVerificationStatus() {
             currentUserId = null;
 
 
+            setVoiceStatus(
+                "غير متصل بالصوت",
+                false
+            );
+
+            updateCurrentStatus();
+
+
             showMessage(
                 "⚠️ خرجت من سيرفر CT. يجب إعادة التحقق عند دخولك مرة أخرى."
             );
@@ -1791,6 +2096,7 @@ function startVerificationStatus() {
 
     stopVerificationStatus();
 
+
     statusTimer =
         setInterval(
             checkVerificationStatus,
@@ -1803,7 +2109,9 @@ function stopVerificationStatus() {
 
     if (statusTimer) {
 
-        clearInterval(statusTimer);
+        clearInterval(
+            statusTimer
+        );
 
         statusTimer = null;
     }
@@ -1818,7 +2126,9 @@ function startPlayersRefresh() {
 
     stopPlayersRefresh();
 
+
     updatePlayers();
+
 
     playersTimer =
         setInterval(
@@ -1832,7 +2142,9 @@ function stopPlayersRefresh() {
 
     if (playersTimer) {
 
-        clearInterval(playersTimer);
+        clearInterval(
+            playersTimer
+        );
 
         playersTimer = null;
     }
@@ -1845,7 +2157,9 @@ function stopPlayersRefresh() {
 
 async function updatePlayers() {
 
-    if (!currentUserId) return;
+    if (!currentUserId) {
+        return;
+    }
 
 
     try {
@@ -1864,13 +2178,18 @@ async function updatePlayers() {
 
 
         const data =
-            await readResponse(response);
+            await readResponse(
+                response
+            );
 
 
         if (
             !data ||
-            !Array.isArray(data.players)
+            !Array.isArray(
+                data.players
+            )
         ) {
+
             return;
         }
 
@@ -1878,6 +2197,7 @@ async function updatePlayers() {
         updatePlayersList(
             data.players
         );
+
 
         applyProximityVolume(
             data.players
@@ -1897,12 +2217,15 @@ async function updatePlayers() {
 // PLAYERS LIST
 // =========================================================
 
-function updatePlayersList(players) {
+function updatePlayersList(
+    players
+) {
 
     const container =
         document.getElementById(
             "playersList"
         );
+
 
     const count =
         document.getElementById(
@@ -1910,28 +2233,38 @@ function updatePlayersList(players) {
         );
 
 
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
 
     const others =
         players.filter(
             player =>
-                Number(player.user_id) !==
-                Number(currentUserId)
+                Number(
+                    player.user_id
+                ) !==
+                Number(
+                    currentUserId
+                )
         );
 
 
     if (count) {
 
         count.textContent =
-            String(others.length);
+            String(
+                others.length
+            );
     }
 
 
     container.innerHTML = "";
 
 
-    if (others.length === 0) {
+    if (
+        others.length === 0
+    ) {
 
         container.innerHTML =
             `<div class="empty-players">
@@ -1942,10 +2275,14 @@ function updatePlayersList(players) {
     }
 
 
-    for (const player of others) {
+    for (
+        const player of others
+    ) {
 
         const item =
-            document.createElement("div");
+            document.createElement(
+                "div"
+            );
 
 
         item.className =
@@ -1953,27 +2290,36 @@ function updatePlayersList(players) {
 
 
         item.dataset.userId =
-            String(player.user_id);
+            String(
+                player.user_id
+            );
 
 
         if (player.speaking) {
 
-            item.classList.add("speaking");
+            item.classList.add(
+                "speaking"
+            );
         }
 
 
         if (player.muted) {
 
-            item.classList.add("player-muted");
+            item.classList.add(
+                "player-muted"
+            );
         }
 
 
         const name =
-            document.createElement("span");
+            document.createElement(
+                "span"
+            );
 
 
         name.className =
             "voice-player-name";
+
 
         name.textContent =
             player.username ||
@@ -1981,7 +2327,9 @@ function updatePlayersList(players) {
 
 
         const status =
-            document.createElement("span");
+            document.createElement(
+                "span"
+            );
 
 
         status.className =
@@ -1993,7 +2341,9 @@ function updatePlayersList(players) {
             status.textContent =
                 "🔇 مكتوم";
 
-        } else if (player.speaking) {
+        } else if (
+            player.speaking
+        ) {
 
             status.textContent =
                 "🟢 يتحدث";
@@ -2017,28 +2367,45 @@ function updatePlayersList(players) {
 // PROXIMITY
 // =========================================================
 
-function applyProximityVolume(players) {
+function applyProximityVolume(
+    players
+) {
 
-    if (!livekitRoom) return;
+    if (!livekitRoom) {
+        return;
+    }
 
 
     const me =
         players.find(
             player =>
-                Number(player.user_id) ===
-                Number(currentUserId)
+                Number(
+                    player.user_id
+                ) ===
+                Number(
+                    currentUserId
+                )
         );
 
 
-    if (!me) return;
+    if (!me) {
+        return;
+    }
 
 
-    for (const remotePlayer of players) {
+    for (
+        const remotePlayer of players
+    ) {
 
         if (
-            Number(remotePlayer.user_id) ===
-            Number(currentUserId)
+            Number(
+                remotePlayer.user_id
+            ) ===
+            Number(
+                currentUserId
+            )
         ) {
+
             continue;
         }
 
@@ -2047,7 +2414,9 @@ function applyProximityVolume(players) {
             livekitRoom
                 .remoteParticipants
                 .get(
-                    String(remotePlayer.user_id)
+                    String(
+                        remotePlayer.user_id
+                    )
                 );
 
 
@@ -2091,7 +2460,9 @@ function applyParticipantVolume(
     try {
 
         const userId =
-            String(participant.identity);
+            String(
+                participant.identity
+            );
 
 
         const audioElements =
@@ -2104,41 +2475,52 @@ function applyParticipantVolume(
             audio => {
 
                 if (
-                    String(audio.dataset.userId) ===
-                    userId
+                    String(
+                        audio.dataset.userId
+                    ) === userId
                 ) {
 
-                    audio.volume = volume;
+                    audio.volume =
+                        volume;
                 }
             }
         );
 
 
-        participant
-            .audioTrackPublications
-            .forEach(
-                publication => {
+        if (
+            participant.audioTrackPublications
+        ) {
 
-                    const track =
-                        publication.track;
+            participant
+                .audioTrackPublications
+                .forEach(
+                    publication => {
 
-                    if (!track) return;
+                        const track =
+                            publication.track;
 
-                    if (
-                        typeof track.setVolume ===
-                        "function"
-                    ) {
 
-                        try {
+                        if (!track) {
+                            return;
+                        }
 
-                            track.setVolume(
-                                volume
-                            );
 
-                        } catch (_) {}
+                        if (
+                            typeof track.setVolume ===
+                            "function"
+                        ) {
+
+                            try {
+
+                                track.setVolume(
+                                    volume
+                                );
+
+                            } catch (_) {}
+                        }
                     }
-                }
-            );
+                );
+        }
 
     } catch (error) {
 
@@ -2154,10 +2536,19 @@ function applyParticipantVolume(
 // RESET PARTICIPANT AUDIO
 // =========================================================
 
-function resetParticipantAudio(participant) {
+function resetParticipantAudio(
+    participant
+) {
+
+    if (!participant) {
+        return;
+    }
+
 
     const userId =
-        String(participant.identity);
+        String(
+            participant.identity
+        );
 
 
     document
@@ -2168,15 +2559,19 @@ function resetParticipantAudio(participant) {
             audio => {
 
                 if (
-                    String(audio.dataset.userId) !==
-                    userId
+                    String(
+                        audio.dataset.userId
+                    ) !== userId
                 ) {
+
                     return;
                 }
+
 
                 try {
                     audio.pause();
                 } catch (_) {}
+
 
                 audio.remove();
             }
@@ -2188,15 +2583,20 @@ function resetParticipantAudio(participant) {
 // DISTANCE
 // =========================================================
 
-function calculateDistance(a, b) {
+function calculateDistance(
+    a,
+    b
+) {
 
     const dx =
         Number(a.x || 0) -
         Number(b.x || 0);
 
+
     const dy =
         Number(a.y || 0) -
         Number(b.y || 0);
+
 
     const dz =
         Number(a.z || 0) -
@@ -2215,14 +2615,18 @@ function calculateDistance(a, b) {
 // VOLUME
 // =========================================================
 
-function calculateVolume(distance) {
+function calculateVolume(
+    distance
+) {
 
     const MAX_DISTANCE = 80;
 
 
     if (
-        distance >= MAX_DISTANCE
+        distance >=
+        MAX_DISTANCE
     ) {
+
         return 0;
     }
 
@@ -2249,7 +2653,14 @@ function calculateVolume(distance) {
 // ACTIVE SPEAKERS
 // =========================================================
 
-function handleActiveSpeakers(speakers) {
+function handleActiveSpeakers(
+    speakers
+) {
+
+    if (!Array.isArray(speakers)) {
+        return;
+    }
+
 
     const activeIds =
         new Set(
@@ -2268,7 +2679,9 @@ function handleActiveSpeakers(speakers) {
         );
 
 
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
 
     const items =
@@ -2284,7 +2697,9 @@ function handleActiveSpeakers(speakers) {
                 item.dataset.userId;
 
 
-            if (!userId) return;
+            if (!userId) {
+                return;
+            }
 
 
             if (
@@ -2316,7 +2731,9 @@ async function sendVoiceState(
     speaking = false
 ) {
 
-    if (!currentUserId) return;
+    if (!currentUserId) {
+        return;
+    }
 
 
     try {
@@ -2326,13 +2743,23 @@ async function sendVoiceState(
             {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type":
+                        "application/json"
                 },
                 body: JSON.stringify({
-                    user_id: currentUserId,
-                    connected: connectedToVoice,
-                    mic_enabled: !isMicrophoneMuted,
-                    speaking: Boolean(speaking)
+                    user_id:
+                        currentUserId,
+
+                    connected:
+                        connectedToVoice,
+
+                    mic_enabled:
+                        !isMicrophoneMuted,
+
+                    speaking:
+                        Boolean(
+                            speaking
+                        )
                 })
             },
             8000
@@ -2378,8 +2805,11 @@ if (verificationCode) {
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
+
+                event.preventDefault();
 
                 verifyCode();
             }
@@ -2395,8 +2825,11 @@ if (usernameInput) {
         event => {
 
             if (
-                event.key === "Enter"
+                event.key ===
+                "Enter"
             ) {
+
+                event.preventDefault();
 
                 requestVerification();
             }
@@ -2519,22 +2952,60 @@ if (leaveModal) {
 
 
 // =========================================================
+// PAGE UNLOAD
+// =========================================================
+
+window.addEventListener(
+    "beforeunload",
+    () => {
+
+        try {
+
+            if (
+                livekitRoom
+            ) {
+
+                livekitRoom.disconnect();
+            }
+
+        } catch (_) {}
+    }
+);
+
+
+// =========================================================
 // INITIAL STATE
 // =========================================================
 
-hideElement(microphoneStep);
-hideElement(codeStep);
-hideElement(voiceCard);
-hideElement(adminCard);
+hideElement(
+    microphoneStep
+);
 
-showElement(usernameStep);
+hideElement(
+    codeStep
+);
+
+hideElement(
+    voiceCard
+);
+
+hideElement(
+    adminCard
+);
+
+showElement(
+    usernameStep
+);
+
 
 updateMicrophoneButton();
+
 
 setVoiceStatus(
     "غير متصل بالصوت",
     false
 );
+
 
 updateCurrentStatus();
 
