@@ -88,8 +88,10 @@ app.add_middleware(
 def db():
     con = sqlite3.connect(DB_FILE)
     con.row_factory = sqlite3.Row
+
     con.execute("PRAGMA journal_mode=WAL")
     con.execute("PRAGMA busy_timeout=5000")
+
     return con
 
 
@@ -487,21 +489,27 @@ def debug_routes():
 
     for route in app.routes:
 
-        methods = list(route.methods or [])
+        path = getattr(route, "path", "")
+
+        methods = list(
+            getattr(route, "methods", []) or []
+        )
 
         routes.append({
-            "path": route.path,
+            "path": path,
             "methods": methods
         })
+
+    roblox_player_endpoint = any(
+        route["path"] == "/roblox/player"
+        and "POST" in route["methods"]
+        for route in routes
+    )
 
     return {
         "success": True,
         "version": VERSION,
-        "roblox_player_endpoint": any(
-            route["path"] == "/roblox/player"
-            and "POST" in route["methods"]
-            for route in routes
-        ),
+        "roblox_player_endpoint": roblox_player_endpoint,
         "routes": routes
     }
 
@@ -800,6 +808,8 @@ def auth_decline(data: AuthRequest):
         seconds=NO_COOLDOWN_SECONDS
     )
 
+    current = now()
+
     con = db()
 
     con.execute("""
@@ -817,15 +827,18 @@ def auth_decline(data: AuthRequest):
 
         ON CONFLICT(user_id)
         DO UPDATE SET
+            username = excluded.username,
             code = '',
+            created_at = excluded.created_at,
+            expires_at = excluded.expires_at,
             attempts = 0,
             verified = 0,
             declined_until = excluded.declined_until
     """, (
         user_id,
         roblox_user["name"],
-        iso(now()),
-        iso(now()),
+        iso(current),
+        iso(current),
         iso(declined_until)
     ))
 
