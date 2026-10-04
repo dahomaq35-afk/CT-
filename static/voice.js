@@ -1,6 +1,6 @@
 // =========================================================
 // CT VOICE - voice.js
-// Final Version
+// FIXED AUTH ERRORS VERSION
 // =========================================================
 
 let currentUsername = "";
@@ -51,7 +51,8 @@ const voiceMessage =
     document.getElementById("voiceMessage");
 
 const checkButton =
-    document.getElementById("checkButton");
+    document.getElementById("checkButton") ||
+    document.getElementById("verifyAccountBtn");
 
 
 // =========================================================
@@ -73,7 +74,13 @@ function hideElement(element) {
 
 
 function showMessage(element, text) {
-    if (!element) return;
+    if (!element) {
+        console.error(
+            "[CT Voice] Message element not found:",
+            text
+        );
+        return;
+    }
 
     element.textContent = text;
     element.classList.remove("hidden");
@@ -89,24 +96,69 @@ function clearMessage(element) {
 
 
 function setButtonLoading(button, loading, text) {
+
     if (!button) return;
 
     if (loading) {
+
         if (!button.dataset.originalText) {
+
             button.dataset.originalText =
                 button.textContent;
         }
 
         button.disabled = true;
+
         button.textContent =
             text || "جارٍ التحقق...";
+
     } else {
+
         button.disabled = false;
 
         button.textContent =
             button.dataset.originalText ||
-            text ||
             "تحقق";
+    }
+}
+
+
+// =========================================================
+// READ SERVER RESPONSE SAFELY
+// =========================================================
+
+async function readResponse(response) {
+
+    const raw =
+        await response.text();
+
+    if (!raw) {
+
+        return {
+            success: false,
+            status: "empty_response",
+            message:
+                `السيرفر لم يرجع أي بيانات. HTTP ${response.status}`
+        };
+    }
+
+    try {
+
+        return JSON.parse(raw);
+
+    } catch (error) {
+
+        console.error(
+            "[CT Voice] Invalid JSON:",
+            raw
+        );
+
+        return {
+            success: false,
+            status: "invalid_response",
+            message:
+                `السيرفر أرسل استجابة غير صالحة. HTTP ${response.status}`
+        };
     }
 }
 
@@ -142,25 +194,55 @@ async function requestVerification() {
 
     try {
 
-        const response =
-            await fetch(
-                "/auth/request",
-                {
-                    method: "POST",
+        const controller =
+            new AbortController();
 
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-
-                    body: JSON.stringify({
-                        username: username
-                    })
-                }
+        const timeout =
+            setTimeout(
+                () => controller.abort(),
+                15000
             );
 
+        let response;
+
+        try {
+
+            response =
+                await fetch(
+                    "/auth/request",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            username: username
+                        }),
+
+                        signal:
+                            controller.signal
+                    }
+                );
+
+        } finally {
+
+            clearTimeout(timeout);
+        }
+
+
         const data =
-            await response.json();
+            await readResponse(response);
+
+
+        console.log(
+            "[CT Voice] Auth Response:",
+            response.status,
+            data
+        );
+
 
         setButtonLoading(
             checkButton,
@@ -179,7 +261,11 @@ async function requestVerification() {
 
             showMessage(
                 message,
-                "❌ " + data.message
+                "❌ " +
+                (
+                    data.message ||
+                    "لم يتم العثور على حساب Roblox بهذا الاسم."
+                )
             );
 
             return;
@@ -187,7 +273,7 @@ async function requestVerification() {
 
 
         // =================================================
-        // NOT INSIDE GAME
+        // NOT IN GAME
         // =================================================
 
         if (
@@ -197,7 +283,11 @@ async function requestVerification() {
 
             showMessage(
                 message,
-                "⚠️ " + data.message
+                "⚠️ " +
+                (
+                    data.message ||
+                    "الحساب موجود، لكن يجب أن تكون داخل سيرفر CT."
+                )
             );
 
             return;
@@ -214,10 +304,13 @@ async function requestVerification() {
         ) {
 
             const minutes =
-                Math.ceil(
-                    Number(
-                        data.remaining || 300
-                    ) / 60
+                Math.max(
+                    1,
+                    Math.ceil(
+                        Number(
+                            data.remaining || 300
+                        ) / 60
+                    )
                 );
 
             showMessage(
@@ -230,16 +323,39 @@ async function requestVerification() {
 
 
         // =================================================
+        // INVALID USERNAME
+        // =================================================
+
+        if (
+            data.status ===
+            "invalid_username"
+        ) {
+
+            showMessage(
+                message,
+                "❌ " +
+                (
+                    data.message ||
+                    "اسم Roblox غير صالح."
+                )
+            );
+
+            return;
+        }
+
+
+        // =================================================
         // SUCCESS
         // =================================================
 
         if (
-            data.success &&
+            data.success === true &&
             data.status === "found"
         ) {
 
             currentUsername =
-                data.username;
+                data.username ||
+                username;
 
             currentUserId =
                 Number(data.user_id);
@@ -254,7 +370,10 @@ async function requestVerification() {
             );
 
 
-            clearMessage(message);
+            clearMessage(
+                message
+            );
+
             clearMessage(
                 declineMessage
             );
@@ -263,10 +382,15 @@ async function requestVerification() {
         }
 
 
+        // =================================================
+        // ANY OTHER SERVER MESSAGE
+        // =================================================
+
         showMessage(
             message,
             data.message ||
-            "حدث خطأ غير متوقع."
+            data.detail ||
+            `حدث خطأ من السيرفر. HTTP ${response.status}`
         );
 
     } catch (error) {
@@ -276,10 +400,25 @@ async function requestVerification() {
             false
         );
 
-        showMessage(
-            message,
-            "تعذر الاتصال بالسيرفر. حاول مرة أخرى."
-        );
+
+        if (
+            error &&
+            error.name === "AbortError"
+        ) {
+
+            showMessage(
+                message,
+                "⏱️ السيرفر تأخر في الرد. حاول مرة أخرى."
+            );
+
+        } else {
+
+            showMessage(
+                message,
+                "❌ تعذر الاتصال بالسيرفر. حاول مرة أخرى."
+            );
+        }
+
 
         console.error(
             "[CT Voice] Auth Error:",
@@ -311,15 +450,6 @@ async function acceptMicrophone() {
     }
 
 
-    /*
-     * يتم إنشاء رمز التحقق في السيرفر.
-     *
-     * الرمز لا يرجع للموقع.
-     *
-     * سكربت Roblox يقرأ الرمز
-     * ويعرضه للاعب داخل اللعبة.
-     */
-
     try {
 
         const response =
@@ -342,14 +472,25 @@ async function acceptMicrophone() {
 
 
         const data =
-            await response.json();
+            await readResponse(response);
 
 
-        if (!response.ok || !data.success) {
+        console.log(
+            "[CT Voice] Code Request:",
+            response.status,
+            data
+        );
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
 
             showMessage(
                 declineMessage,
                 data.message ||
+                data.detail ||
                 "تعذر إنشاء رمز التحقق."
             );
 
@@ -361,7 +502,8 @@ async function acceptMicrophone() {
             Number(data.user_id);
 
         currentUsername =
-            data.username;
+            data.username ||
+            currentUsername;
 
 
         hideElement(
@@ -389,7 +531,7 @@ async function acceptMicrophone() {
 
         showMessage(
             declineMessage,
-            "تعذر الاتصال بالسيرفر."
+            "❌ تعذر الاتصال بالسيرفر."
         );
 
         console.error(
@@ -459,6 +601,10 @@ async function declineMicrophone() {
 
     currentUsername = "";
     currentUserId = null;
+
+    showElement(
+        verificationCard
+    );
 }
 
 
@@ -531,7 +677,14 @@ async function verifyCode() {
 
 
         const data =
-            await response.json();
+            await readResponse(response);
+
+
+        console.log(
+            "[CT Voice] Verify Response:",
+            response.status,
+            data
+        );
 
 
         // =================================================
@@ -545,9 +698,8 @@ async function verifyCode() {
 
             showMessage(
                 codeMessage,
-                `❌ رمز التحقق غير صحيح. المحاولات المتبقية: ${data.remaining_attempts}`
+                `❌ ${data.message || "رمز التحقق غير صحيح."} المحاولات المتبقية: ${data.remaining_attempts}`
             );
-
 
             if (verificationCode) {
                 verificationCode.select();
@@ -568,7 +720,11 @@ async function verifyCode() {
 
             showMessage(
                 codeMessage,
-                "⏳ انتهت صلاحية الرمز. ابدأ التحقق من جديد."
+                "⏳ " +
+                (
+                    data.message ||
+                    "انتهت صلاحية الرمز."
+                )
             );
 
             return;
@@ -586,7 +742,11 @@ async function verifyCode() {
 
             showMessage(
                 codeMessage,
-                "❌ تم تجاوز عدد المحاولات. ابدأ التحقق من جديد."
+                "❌ " +
+                (
+                    data.message ||
+                    "تم تجاوز عدد المحاولات."
+                )
             );
 
             return;
@@ -604,7 +764,11 @@ async function verifyCode() {
 
             showMessage(
                 codeMessage,
-                "⚠️ خرجت من سيرفر CT. يجب إعادة التحقق."
+                "⚠️ " +
+                (
+                    data.message ||
+                    "خرجت من سيرفر CT."
+                )
             );
 
             return;
@@ -616,16 +780,16 @@ async function verifyCode() {
         // =================================================
 
         if (
-            data.success &&
-            data.status ===
-            "verified"
+            data.success === true &&
+            data.status === "verified"
         ) {
 
             currentUserId =
                 Number(data.user_id);
 
             currentUsername =
-                data.username;
+                data.username ||
+                currentUsername;
 
 
             hideElement(
@@ -663,6 +827,7 @@ async function verifyCode() {
         showMessage(
             codeMessage,
             data.message ||
+            data.detail ||
             "رمز التحقق غير صحيح."
         );
 
@@ -670,7 +835,7 @@ async function verifyCode() {
 
         showMessage(
             codeMessage,
-            "تعذر الاتصال بالسيرفر."
+            "❌ تعذر الاتصال بالسيرفر."
         );
 
         console.error(
@@ -736,7 +901,7 @@ async function connectToVoice() {
 
 
         const data =
-            await response.json();
+            await readResponse(response);
 
 
         if (
@@ -747,6 +912,7 @@ async function connectToVoice() {
             showMessage(
                 voiceMessage,
                 data.message ||
+                data.detail ||
                 "تعذر إنشاء اتصال الصوت."
             );
 
@@ -754,20 +920,12 @@ async function connectToVoice() {
         }
 
 
-        // =================================================
-        // CREATE ROOM
-        // =================================================
-
         livekitRoom =
             new LivekitClient.Room({
                 adaptiveStream: true,
                 dynacast: true
             });
 
-
-        // =================================================
-        // DISCONNECTED
-        // =================================================
 
         livekitRoom.on(
             LivekitClient.RoomEvent.Disconnected,
@@ -784,10 +942,6 @@ async function connectToVoice() {
             }
         );
 
-
-        // =================================================
-        // ACTIVE SPEAKERS
-        // =================================================
 
         livekitRoom.on(
             LivekitClient.RoomEvent.ActiveSpeakersChanged,
@@ -815,13 +969,9 @@ async function connectToVoice() {
         );
 
 
-        // =================================================
-        // PARTICIPANT CONNECTED
-        // =================================================
-
         livekitRoom.on(
             LivekitClient.RoomEvent.ParticipantConnected,
-            (participant) => {
+            participant => {
 
                 console.log(
                     "[CT Voice] Player joined:",
@@ -831,13 +981,9 @@ async function connectToVoice() {
         );
 
 
-        // =================================================
-        // PARTICIPANT DISCONNECTED
-        // =================================================
-
         livekitRoom.on(
             LivekitClient.RoomEvent.ParticipantDisconnected,
-            (participant) => {
+            participant => {
 
                 console.log(
                     "[CT Voice] Player left:",
@@ -850,13 +996,6 @@ async function connectToVoice() {
             }
         );
 
-
-        // =================================================
-        // TRACK SUBSCRIBED
-        // =================================================
-        // هذا الجزء مهم جدًا:
-        // يستقبل صوت اللاعب الآخر ويشغله في المتصفح.
-        // =================================================
 
         livekitRoom.on(
             LivekitClient.RoomEvent.TrackSubscribed,
@@ -893,7 +1032,6 @@ async function connectToVoice() {
                         ""
                     );
 
-
                     element.style.display =
                         "none";
 
@@ -908,12 +1046,6 @@ async function connectToVoice() {
                         participant.identity
                     );
 
-
-                    // تطبيق مستوى الصوت الحالي
-                    applySingleParticipantVolume(
-                        participant
-                    );
-
                 } catch (error) {
 
                     console.error(
@@ -925,35 +1057,18 @@ async function connectToVoice() {
         );
 
 
-        // =================================================
-        // TRACK UNSUBSCRIBED
-        // =================================================
-
         livekitRoom.on(
             LivekitClient.RoomEvent.TrackUnsubscribed,
             (
-                track,
-                publication,
-                participant
+                track
             ) => {
 
                 try {
-
                     track.detach();
-
                 } catch (_) {}
-
-                console.log(
-                    "[CT Voice] Audio disconnected:",
-                    participant.identity
-                );
             }
         );
 
-
-        // =================================================
-        // CONNECT
-        // =================================================
 
         await livekitRoom.connect(
             data.url,
@@ -963,10 +1078,6 @@ async function connectToVoice() {
 
         connectedToVoice = true;
 
-
-        // =================================================
-        // MICROPHONE
-        // =================================================
 
         await enableMicrophone();
 
@@ -1023,9 +1134,7 @@ async function enableMicrophone() {
             publications.forEach(
                 publication => {
 
-                    if (
-                        publication.track
-                    ) {
+                    if (publication.track) {
 
                         localAudioTrack =
                             publication.track;
@@ -1100,7 +1209,7 @@ async function toggleMicrophone() {
 
 
 // =========================================================
-// MICROPHONE BUTTON UI
+// MICROPHONE BUTTON
 // =========================================================
 
 function updateMicrophoneButton() {
@@ -1178,32 +1287,23 @@ function setVoiceStatus(
 
 
     if (status) {
-
-        status.textContent =
-            text;
+        status.textContent = text;
     }
 
 
     if (dot) {
 
         if (connected) {
-
-            dot.classList.add(
-                "connected"
-            );
-
+            dot.classList.add("connected");
         } else {
-
-            dot.classList.remove(
-                "connected"
-            );
+            dot.classList.remove("connected");
         }
     }
 }
 
 
 // =========================================================
-// LEAVE CONFIRMATION
+// LEAVE MODAL
 // =========================================================
 
 function showLeaveConfirmation() {
@@ -1213,9 +1313,7 @@ function showLeaveConfirmation() {
             "leaveModal"
         );
 
-
     if (modal) {
-
         modal.classList.remove(
             "hidden"
         );
@@ -1230,9 +1328,7 @@ function hideLeaveConfirmation() {
             "leaveModal"
         );
 
-
     if (modal) {
-
         modal.classList.add(
             "hidden"
         );
@@ -1261,10 +1357,6 @@ async function leaveVoice() {
     stopVerificationStatus();
     stopPlayersRefresh();
 
-
-    // =====================================================
-    // INFORM SERVER
-    // =====================================================
 
     if (currentUserId) {
 
@@ -1297,10 +1389,6 @@ async function leaveVoice() {
     }
 
 
-    // =====================================================
-    // DISCONNECT LIVEKIT
-    // =====================================================
-
     try {
 
         if (livekitRoom) {
@@ -1318,10 +1406,6 @@ async function leaveVoice() {
         );
     }
 
-
-    // =====================================================
-    // REMOVE AUDIO ELEMENTS
-    // =====================================================
 
     document
         .querySelectorAll(
@@ -1345,37 +1429,23 @@ async function leaveVoice() {
 
     isMicrophoneMuted = false;
 
-
     currentUsername = "";
     currentUserId = null;
 
 
     if (verificationCode) {
-
         verificationCode.value = "";
     }
 
 
-    hideElement(
-        voiceCard
-    );
+    hideElement(voiceCard);
+    hideElement(codeCard);
+    hideElement(microphoneCard);
 
-    hideElement(
-        codeCard
-    );
-
-    hideElement(
-        microphoneCard
-    );
-
-
-    showElement(
-        verificationCard
-    );
+    showElement(verificationCard);
 
 
     if (usernameInput) {
-
         usernameInput.value = "";
     }
 
@@ -1389,7 +1459,6 @@ async function leaveVoice() {
         "غير متصل بالصوت",
         false
     );
-
 
     updateMicrophoneButton();
 }
@@ -1413,7 +1482,7 @@ async function checkVerificationStatus() {
 
 
         const data =
-            await response.json();
+            await readResponse(response);
 
 
         if (!data.verified) {
@@ -1421,9 +1490,7 @@ async function checkVerificationStatus() {
             if (livekitRoom) {
 
                 try {
-
                     await livekitRoom.disconnect();
-
                 } catch (_) {}
             }
 
@@ -1437,10 +1504,7 @@ async function checkVerificationStatus() {
             stopPlayersRefresh();
 
 
-            hideElement(
-                voiceCard
-            );
-
+            hideElement(voiceCard);
 
             showElement(
                 verificationCard
@@ -1474,7 +1538,6 @@ async function checkVerificationStatus() {
 function startVerificationStatus() {
 
     stopVerificationStatus();
-
 
     statusTimer =
         setInterval(
@@ -1536,6 +1599,7 @@ async function updatePlayers() {
 
     if (!currentUserId) return;
 
+
     try {
 
         const response =
@@ -1544,13 +1608,11 @@ async function updatePlayers() {
             );
 
 
-        if (!response.ok) {
-            return;
-        }
+        if (!response.ok) return;
 
 
         const data =
-            await response.json();
+            await readResponse(response);
 
 
         if (
@@ -1566,7 +1628,6 @@ async function updatePlayers() {
         updatePlayersList(
             data.players
         );
-
 
         applyProximityVolume(
             data.players
@@ -1624,13 +1685,11 @@ function updatePlayersList(
             "voice-player";
 
 
-        // مهم جدًا للـ ActiveSpeakersChanged
         item.dataset.userId =
             String(player.user_id);
 
 
         if (player.speaking) {
-
             item.classList.add(
                 "speaking"
             );
@@ -1638,7 +1697,6 @@ function updatePlayersList(
 
 
         if (player.muted) {
-
             item.classList.add(
                 "player-muted"
             );
@@ -1653,7 +1711,6 @@ function updatePlayersList(
 
         name.className =
             "voice-player-name";
-
 
         name.textContent =
             player.username ||
@@ -1675,9 +1732,7 @@ function updatePlayersList(
             status.textContent =
                 "🔇 مكتوم";
 
-        } else if (
-            player.speaking
-        ) {
+        } else if (player.speaking) {
 
             status.textContent =
                 "🟢 يتحدث";
@@ -1689,17 +1744,10 @@ function updatePlayersList(
         }
 
 
-        item.appendChild(
-            name
-        );
+        item.appendChild(name);
+        item.appendChild(status);
 
-        item.appendChild(
-            status
-        );
-
-        container.appendChild(
-            item
-        );
+        container.appendChild(item);
     }
 }
 
@@ -1708,9 +1756,7 @@ function updatePlayersList(
 // PROXIMITY VOICE
 // =========================================================
 
-function applyProximityVolume(
-    players
-) {
+function applyProximityVolume(players) {
 
     if (!livekitRoom) return;
 
@@ -1718,12 +1764,8 @@ function applyProximityVolume(
     const me =
         players.find(
             player =>
-                Number(
-                    player.user_id
-                ) ===
-                Number(
-                    currentUserId
-                )
+                Number(player.user_id) ===
+                Number(currentUserId)
         );
 
 
@@ -1731,17 +1773,12 @@ function applyProximityVolume(
 
 
     for (
-        const remotePlayer of
-        players
+        const remotePlayer of players
     ) {
 
         if (
-            Number(
-                remotePlayer.user_id
-            ) ===
-            Number(
-                currentUserId
-            )
+            Number(remotePlayer.user_id) ===
+            Number(currentUserId)
         ) {
             continue;
         }
@@ -1757,9 +1794,7 @@ function applyProximityVolume(
                 );
 
 
-        if (!participant) {
-            continue;
-        }
+        if (!participant) continue;
 
 
         applyParticipantVolume(
@@ -1768,28 +1803,6 @@ function applyProximityVolume(
             remotePlayer
         );
     }
-}
-
-
-// =========================================================
-// SINGLE PARTICIPANT VOLUME
-// =========================================================
-
-function applySingleParticipantVolume(
-    participant
-) {
-
-    if (!livekitRoom) return;
-
-
-    if (!currentUserId) return;
-
-
-    // نستخدم آخر بيانات اللاعبين الموجودة
-    // عبر استدعاء updatePlayers في الدورة القادمة.
-    //
-    // لا نرفع الصوت تلقائيًا هنا،
-    // حتى لا نعطي صوتًا كاملًا قبل معرفة المسافة.
 }
 
 
@@ -1827,12 +1840,9 @@ function applyParticipantVolume(
                         publication.track;
 
 
-                    if (!track) {
-                        return;
-                    }
+                    if (!track) return;
 
 
-                    // LiveKit AudioTrack
                     if (
                         typeof track.setVolume ===
                         "function"
@@ -1844,7 +1854,6 @@ function applyParticipantVolume(
 
                     } else {
 
-                        // احتياط للـ HTML Audio Element
                         const audioElements =
                             document.querySelectorAll(
                                 `audio[data-user-id="${CSS.escape(
@@ -1911,10 +1920,7 @@ function resetParticipantAudio(
 // DISTANCE
 // =========================================================
 
-function calculateDistance(
-    a,
-    b
-) {
+function calculateDistance(a, b) {
 
     const dx =
         Number(a.x || 0) -
@@ -1941,16 +1947,13 @@ function calculateDistance(
 // VOLUME
 // =========================================================
 
-function calculateVolume(
-    distance
-) {
+function calculateVolume(distance) {
 
     const MAX_DISTANCE = 80;
 
 
     if (
-        distance >=
-        MAX_DISTANCE
+        distance >= MAX_DISTANCE
     ) {
         return 0;
     }
@@ -2015,9 +2018,7 @@ function handleActiveSpeakers(
                 item.dataset.userId;
 
 
-            if (!userId) {
-                return;
-            }
+            if (!userId) return;
 
 
             if (
@@ -2075,9 +2076,7 @@ async function sendVoiceState(
                         !isMicrophoneMuted,
 
                     speaking:
-                        Boolean(
-                            speaking
-                        )
+                        Boolean(speaking)
                 })
             }
         );
@@ -2122,8 +2121,7 @@ if (verificationCode) {
         event => {
 
             if (
-                event.key ===
-                "Enter"
+                event.key === "Enter"
             ) {
 
                 verifyCode();
@@ -2144,8 +2142,7 @@ if (usernameInput) {
         event => {
 
             if (
-                event.key ===
-                "Enter"
+                event.key === "Enter"
             ) {
 
                 requestVerification();
@@ -2156,7 +2153,7 @@ if (usernameInput) {
 
 
 // =========================================================
-// CLOSE MODAL BY CLICKING OUTSIDE
+// CLOSE MODAL
 // =========================================================
 
 const leaveModal =
@@ -2196,7 +2193,7 @@ setVoiceStatus(
 
 
 // =========================================================
-// EXPOSE FUNCTIONS FOR HTML BUTTONS
+// EXPOSE FUNCTIONS
 // =========================================================
 
 window.requestVerification =
